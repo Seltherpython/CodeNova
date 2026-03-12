@@ -1,0 +1,5 @@
+{
+  "name": "RepoData AI",
+  "description": "Convert GitHub repositories into searchable AI datasets.",
+  "requestFramePermissions": []
+}

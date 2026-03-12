@@ -1,0 +1,51 @@
+{
+  "name": "react-example",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server/index.ts",
+    "build": "tsc && vite build",
+    "start": "node server/index.ts"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@tailwindcss/vite": "^4.2.1",
+    "@types/compression": "^1.8.1",
+    "@types/node-fetch": "^2.6.13",
+    "@vitejs/plugin-react": "^5.1.4",
+    "axios": "^1.13.6",
+    "compression": "^1.8.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.3.1",
+    "firebase": "^12.10.0",
+    "firebase-admin": "^13.7.0",
+    "form-data": "^4.0.5",
+    "gray-matter": "^4.0.3",
+    "helmet": "^8.1.0",
+    "lucide-react": "^0.577.0",
+    "luxon": "^3.7.2",
+    "motion": "^12.35.2",
+    "node-fetch": "^2.7.0",
+    "octokit": "^5.0.5",
+    "path-browserify": "^1.0.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-helmet-async": "^3.0.0",
+    "react-markdown": "^9.1.0",
+    "react-router-dom": "^7.13.1",
+    "remark-gfm": "^4.0.1",
+    "vite": "^7.3.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.14.0",
+    "autoprefixer": "^10.4.27",
+    "tailwindcss": "^4.2.1",
+    "terser": "^5.46.0",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2"
+  }
+}

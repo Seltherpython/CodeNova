@@ -1,0 +1,135 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  /* Notte-Inspired Mint Palette */
+  --color-brand-50: oklch(0.98 0.01 160);
+  --color-brand-100: oklch(0.95 0.03 160);
+  --color-brand-200: oklch(0.9 0.06 160);
+  --color-brand-300: oklch(0.85 0.1 160);
+  --color-brand-400: oklch(0.8 0.15 160);
+  --color-brand-500: #76F1BC; /* Notte Mint */
+  --color-brand-600: oklch(0.7 0.15 160);
+  --color-brand-700: oklch(0.6 0.15 160);
+  --color-brand-800: oklch(0.4 0.1 160);
+  --color-brand-900: oklch(0.2 0.05 160);
+  
+  /* Hard Blue Neutralization */
+  --color-blue-50: oklch(0.98 0 0);
+  --color-blue-100: oklch(0.95 0 0);
+  --color-blue-200: oklch(0.9 0 0);
+  --color-blue-300: oklch(0.8 0 0);
+  --color-blue-400: oklch(0.6 0 0);
+  --color-blue-500: oklch(0.4 0 0);
+  --color-blue-600: oklch(0.3 0 0);
+  --color-blue-700: oklch(0.2 0 0);
+  --color-blue-800: oklch(0.1 0 0);
+  --color-blue-900: oklch(0.05 0 0);
+
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+}
+
+:root {
+  --background: #FFFFFF;
+  --foreground: #1A1A1A;
+  --accent: #76F1BC;
+  --sidebar: #F5F5F5;
+  --border: #E5E5E5;
+}
+
+.dark {
+  --background: #0A0A0A;
+  --foreground: #F5F5F5;
+  --sidebar: #141414;
+  --border: #262626;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Notte minimalist cards */
+.notte-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notte-card:hover {
+  border-color: #76F1BC;
+}
+
+.dark .notte-card {
+  background: var(--sidebar);
+}
+
+/* Extreme Performance Optimization - Reduce blur/shadow overhead */
+.blur-3xl {
+  filter: blur(40px);
+}
+
+/* Animations - refined to be snappier (from 0.3s to 0.2s) */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation: fadeIn 0.15s ease-out forwards;
+}
+
+/* Custom Scrollbar - Minimalist */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #E5E5E5;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #D4D4D4;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #262626;
+}
+
+/* Typography Enhancements */
+h1, h2, h3, h4 {
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+
+.text-zinc-500 {
+  color: #737373;
+}
+
+/* Pure Monochromatic Overrides */
+* {
+  border-color: var(--border);
+}
+
+/* Focus states */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
