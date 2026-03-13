@@ -28,6 +28,7 @@ import {
 import { Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import SEO from './components/SEO';
+import { isMockAuth } from './services/firebase';
 
 // --- Extreme Performance: Lazy Loading ---
 const Home = lazy(() => import('./pages/Home'));
@@ -332,6 +333,15 @@ const SettingsPage = () => {
         <h1 className="text-2xl xs:text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase italic">My Profile</h1>
         <p className="text-[11px] sm:text-sm text-zinc-500 font-medium">Account details and environment settings.</p>
       </div>
+      {isMockAuth && (
+        <div className="flex items-center gap-3 p-4 bg-[#76F1BC]/10 border border-[#76F1BC]/20 rounded-2xl animate-in">
+          <ShieldCheck className="w-5 h-5 text-[#76F1BC]" />
+          <div className="space-y-0.5">
+            <p className="text-[10px] font-black text-[#76F1BC] uppercase tracking-widest">Self-Hosted Unlimited Mode</p>
+            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tight">Local authentication active. Premium perks unlocked.</p>
+          </div>
+        </div>
+      )}
 
       <div className="notte-card p-8 sm:p-12 space-y-8 sm:space-y-12 relative overflow-hidden bg-white/[0.02]">
         <div className="absolute top-0 right-0 p-8 sm:p-12 opacity-5">

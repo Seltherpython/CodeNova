@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { Zap, Database, ShieldCheck, Activity, Terminal, ArrowRight, Code2, Globe } from 'lucide-react';
+import { Logo } from '../components/Logo';
+import { Zap, Database, ShieldCheck, Activity, ArrowRight, Code2, Globe } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
 
@@ -55,7 +56,7 @@ export default function Home() {
                   to="/builder"
                   className="w-full sm:w-auto rounded-2xl bg-white px-8 py-5 sm:px-12 sm:py-6 text-xs font-black text-black shadow-2xl hover:bg-[#76F1BC] transition-all hover:scale-[1.03] active:scale-95 flex items-center justify-center gap-3 uppercase tracking-[0.3em]"
                 >
-                  Start Analyzing <Terminal className="w-4 h-4" />
+                  Start Analyzing <Logo className="w-4 h-4" />
                 </Link>
                 <Link to="/about" className="text-[10px] font-black leading-6 text-zinc-500 hover:text-white transition-colors uppercase tracking-[0.4em] flex items-center gap-4 py-2">
                   How it Works <Activity className="w-3 h-3" />
@@ -96,7 +97,7 @@ export default function Home() {
           <div className="mt-32 sm:mt-48 max-w-5xl mx-auto pb-24 sm:pb-32">
             <div className="flex items-center justify-between mb-8 px-4">
               <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 flex items-center gap-3">
-                <Terminal className="w-4 h-4 text-[#76F1BC]" /> Quick Start Examples
+                <Logo className="w-4 h-4 text-[#76F1BC]" /> Quick Start Examples
               </h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

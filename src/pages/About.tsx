@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { Shield, Zap, Database, Terminal, Globe, Cpu, Layers, Info, Lock, Code2, Rocket } from 'lucide-react';
+import { Logo } from '../components/Logo';
+import { Shield, Zap, Database, Globe, Cpu, Layers, Info, Lock, Code2, Rocket } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
 
@@ -14,7 +15,7 @@ export default function About() {
     {
       id: 'usage',
       title: 'How to use',
-      icon: Terminal,
+      icon: Logo,
       content: 'Just paste a GitHub link into the analyzer. The system will create a "Project Map" that makes the code easy for an AI to read. You can then chat with your project or edit the map yourself in the workshop area.'
     },
     {
@@ -182,7 +183,7 @@ response = requests.post(url, headers=headers, data=json.dumps(payload)){"\n"}{"
           <div className="col-span-1">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center">
-                <Terminal className="w-4 h-4 text-[#76F1BC]" />
+                <Logo className="w-4 h-4 text-[#76F1BC]" />
               </div>
               <span className="font-black text-white uppercase italic">Repo Trace</span>
             </div>
