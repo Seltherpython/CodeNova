@@ -3,12 +3,15 @@ import {
   onAuthStateChanged, 
   GoogleAuthProvider, 
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   User as FirebaseUser,
   getIdToken,
-  signInWithRedirect,
-  getRedirectResult,
-  GithubAuthProvider
+  GithubAuthProvider,
+  setPersistence,
+  browserLocalPersistence,
+  updateProfile
 } from 'firebase/auth';
 import { auth } from '../services/firebase';
 
@@ -36,63 +39,91 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
+  const [isInitializing, setIsInitializing] = useState(true);
   useEffect(() => {
-    // Safety timeout to prevent infinite blank screen if Firebase is slow
-    const safetyTimeout = setTimeout(() => {
-      if (isLoading) {
-        console.warn("Auth handshake taking too long. Falling back to public context.");
-        setIsLoading(false);
-      }
-    }, 2500);
+    let mounted = true;
+    
+    const bootProtocol = async () => {
+      console.log("%c💎 [SESSION_MANAGER] Activating Protocol v4.6 [SYNCHRO_UPDATE]", "color: #00FFFF; font-weight: bold; font-size: 14px;");
 
-    // Handle redirect result (catch errors from Google/Github redirect)
-    getRedirectResult(auth).then((result) => {
-      if (result) {
-        // Extract Github Token if available
-        const credential = GithubAuthProvider.credentialFromResult(result);
-        if (credential?.accessToken) {
-          localStorage.setItem('rp_github_token', credential.accessToken);
-          setProfile(prev => prev ? { ...prev, githubToken: credential.accessToken } : null);
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+        const result = await getRedirectResult(auth);
+        if (result && mounted) {
+          console.log("✅ [SESSION_MANAGER] Redirect resolved:", result.user.email);
+          const credential = GithubAuthProvider.credentialFromResult(result);
+          if (credential?.accessToken) {
+            localStorage.setItem('rp_github_token', credential.accessToken);
+          }
         }
+      } catch (err: any) {
+        console.warn("[SESSION_MANAGER] Boot Intercept:", err.message);
       }
-    }).catch((error) => {
-      console.error("Auth Redirect Error:", error);
-    });
+    };
+
+    bootProtocol();
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      clearTimeout(safetyTimeout);
-      setUser(currentUser);
+      if (!mounted) return;
+      
+      console.log("%c[SESSION_MANAGER] Profile Sync -> " + (currentUser ? `ACTIVE (${currentUser.email})` : "EMPTY"), "color: #FF00FF;");
+      
       if (currentUser) {
+        const providerInfo = currentUser.providerData[0];
         setProfile({
           uid: currentUser.uid,
-          name: currentUser.displayName || 'Developer',
-          email: currentUser.email || '',
-          avatar: currentUser.photoURL || undefined,
+          name: currentUser.displayName || providerInfo?.displayName || 'Developer',
+          email: currentUser.email || providerInfo?.email || '',
+          avatar: currentUser.photoURL || providerInfo?.photoURL || undefined,
           githubToken: localStorage.getItem('rp_github_token') || undefined
         });
       } else {
         setProfile(null);
       }
-      setIsLoading(false);
+      
+      setUser(currentUser);
+      setIsInitializing(false);
     });
 
     return () => {
+      mounted = false;
       unsubscribe();
-      clearTimeout(safetyTimeout);
     };
   }, []);
 
   const loginWithGoogle = useCallback(async () => {
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    provider.setCustomParameters({ prompt: 'select_account' });
+    try {
+      console.log("🛠️ [SESSION_MANAGER] Protocol Google: POPUP");
+      await signInWithPopup(auth, provider);
+    } catch (err: any) {
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/popup-blocked') {
+        console.info("🛠️ [SESSION_MANAGER] Identity blocked. Protocol fallback: REDIRECT");
+        await signInWithRedirect(auth, provider);
+      } else {
+        throw err;
+      }
+    }
   }, []);
 
   const loginWithGithub = useCallback(async () => {
     const provider = new GithubAuthProvider();
-    provider.addScope('repo'); // Essential for scanning private or public repos with user limits
-    await signInWithRedirect(auth, provider);
+    provider.addScope('repo'); 
+    provider.addScope('user:email'); 
+    provider.addScope('read:user');
+    
+    try {
+      console.log("🛠️ [SESSION_MANAGER] Protocol GitHub: POPUP");
+      await signInWithPopup(auth, provider);
+    } catch (err: any) {
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/popup-blocked') {
+        console.info("🛠️ [SESSION_MANAGER] Identity blocked. Protocol fallback: REDIRECT");
+        await signInWithRedirect(auth, provider);
+      } else {
+        throw err;
+      }
+    }
   }, []);
 
   const logout = useCallback(async () => {
@@ -108,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <AuthContext.Provider value={{ 
       isAuthenticated: !!user, 
-      isLoading,
+      isLoading: isInitializing,
       user, 
       profile,
       loginWithGoogle,

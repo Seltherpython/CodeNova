@@ -10,7 +10,7 @@ interface SEOProps {
 
 export default function SEO({ 
   title, 
-  description = 'Transform any GitHub repository into LLM-ready perception datasets. The ultimate ingestion protocol for the next generation of agentic coding workflows.', 
+  description = 'Repodata AI is a professional tool to understand any GitHub project. Get fast, clear, and free code analysis for developers and AI enthusiasts alike.', 
   canonical,
   ogType = 'website'
 }: SEOProps) {
@@ -19,8 +19,10 @@ export default function SEO({
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const currentHost = window.location.hostname;
-      if (currentHost !== 'localhost' && currentHost !== '127.0.0.1') {
+      if (currentHost !== 'localhost' && currentHost !== '127.0.0.1' && currentHost !== '') {
         setHostname(currentHost);
+      } else {
+        setHostname('repodata.ai');
       }
     }
   }, []);
@@ -29,10 +31,14 @@ export default function SEO({
   
   // SEO Fix: Ensure title is longer and more descriptive than 11 characters
   const displayTitle = title 
-    ? (title.length < 20 ? `${title} | ${siteName} - Repository Intelligence` : title)
-    : `${siteName} | High-Fidelity Repository Ingestion for Agents`;
+    ? (title.length < 30 ? `${title} | ${siteName} - Advanced Repository Insights` : title)
+    : `${siteName} | Professional GitHub Code Analysis and Help`;
 
-  const fullCanonical = canonical || `https://${hostname}${window.location.pathname}`;
+  const cleanPath = window.location.pathname.endsWith('/') && window.location.pathname.length > 1 
+    ? window.location.pathname.slice(0, -1) 
+    : window.location.pathname;
+
+  const fullCanonical = canonical || `https://${hostname}${cleanPath}`;
 
   return (
     <Helmet>
@@ -66,7 +72,7 @@ export default function SEO({
       <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
       
       {/* Keywords Audit */}
-      <meta name="keywords" content="AI, LLM, Repository Ingestion, Agentic Coding, GitHub Data, Code Analysis, Perception Map, Development Tools" />
+      <meta name="keywords" content="AI, Code Help, GitHub Scan, Developer Tools, Simple Analysis, Project Helper" />
     </Helmet>
   );
 }

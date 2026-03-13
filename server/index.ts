@@ -10,194 +10,555 @@ import path from "path";
 import admin from "firebase-admin";
 import crypto from "crypto";
 
-// Relative imports updated for new server structure
 import { ingestRepo, parseGitHubUrl } from "./services/githubService";
-import { summarizeCodebase, chatWithCodebase } from "./services/geminiService";
+import { summarizeCodebase, chatWithCodebase, aiEditFile, USE_OLLAMA, OLLAMA_MODEL, GEMINI_MODEL } from "./services/geminiService";
 import { generateRandomIdentifiers } from "./services/pluginService";
 
-// --- Storage Infrastructure ---
+// ─── Environment flags ────────────────────────────────────────────────────────
+// When DISABLE_RATE_LIMIT=true (self-hosted/GitHub version), all AI limits are removed
+const IS_DEPLOYED = process.env.DISABLE_RATE_LIMIT !== "true" && process.env.NODE_ENV === "production";
+
+// ─── Firebase (optional) ─────────────────────────────────────────────────────
 let db: admin.firestore.Firestore | null = null;
 let auth: admin.auth.Auth | null = null;
 
-if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+const SA_JSON = process.env.FIREBASE_SERVICE_ACCOUNT;
+if (SA_JSON) {
   try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-    db = admin.firestore();
-    auth = admin.auth();
-    console.log("🟢 SYSTEM: Firebase Cloud Storage Synced.");
-  } catch (err) {
-    console.warn("🟡 SYSTEM: Firebase Init Failed. Starting in Local-Only Mode.");
+    let serviceAccount;
+    if (SA_JSON.trim().startsWith("{")) {
+      serviceAccount = JSON.parse(SA_JSON);
+    } else {
+      const fileContent = await fs.readFile(path.resolve(SA_JSON), "utf-8");
+      serviceAccount = JSON.parse(fileContent);
+    }
+    if (serviceAccount) {
+      admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+      db = admin.firestore();
+      auth = admin.auth();
+      console.log("🟢 Firebase Cloud Storage synced.");
+    }
+  } catch (err: any) {
+    console.warn(`🟡 Firebase init failed: ${err.message}. Using Local Mode.`);
   }
+} else {
+  console.log("⚪ Local-Only Mode (no FIREBASE_SERVICE_ACCOUNT).");
 }
 
+// ─── Local storage paths ──────────────────────────────────────────────────────
 const LOCAL_DATA_DIR = path.resolve("data");
 const STORE = {
   repos: path.join(LOCAL_DATA_DIR, "repositories"),
-  keys: path.join(LOCAL_DATA_DIR, "api_keys")
+  keys:  path.join(LOCAL_DATA_DIR, "api_keys"),
+  files: path.join(LOCAL_DATA_DIR, "context_files"), // .txt context files per repo
 };
 
+// ─── Promo & Cloud Restrictions ───────────────────────────────────────────────
+const unlockedUsers = new Set<string>();
+let promoUses = 3;
+
 async function bootstrap() {
-  await fs.mkdir(STORE.repos, { recursive: true });
-  await fs.mkdir(STORE.keys, { recursive: true });
+  await fs.mkdir(STORE.repos,  { recursive: true });
+  await fs.mkdir(STORE.keys,   { recursive: true });
+  await fs.mkdir(STORE.files,  { recursive: true });
 }
 
 async function atomicWrite(filePath: string, data: any) {
-  const tempPath = `${filePath}.tmp`;
-  await fs.writeFile(tempPath, JSON.stringify(data), "utf-8");
-  await fs.rename(tempPath, filePath);
+  const tmp = `${filePath}.tmp`;
+  await fs.writeFile(tmp, typeof data === "string" ? data : JSON.stringify(data), "utf-8");
+  await fs.rename(tmp, filePath);
 }
 
+// ─── Auth middleware ──────────────────────────────────────────────────────────
 const authenticate: express.RequestHandler = async (req, res, next) => {
-  if (req.method === 'OPTIONS') return next();
-  const bearer = req.headers.authorization?.split(" ")[1];
-  if (!bearer) return res.status(401).json({ error: "Login required." });
+  if (req.method === "OPTIONS") return next();
+  const bearer = (req.headers.authorization || "").split(" ")[1];
+  
+  // Allow unauthenticated chat calls temporarily (will check repository publicAgent flag inside route)
+  if (!bearer) {
+    if (req.path.endsWith("/chat")) {
+       (req as any).user = { uid: "public" };
+       return next();
+    }
+    return res.status(401).json({ error: "Authorization required." });
+  }
 
-  // 1. API Key Authentication (rp_live_...)
+  // API Key
   if (bearer.startsWith("rp_live_")) {
     if (db) {
       const q = await db.collection("api_keys").where("key", "==", bearer).get();
-      if (!q.empty) return next();
+      if (!q.empty) { (req as any).user = { uid: q.docs[0].data().userId, isApiKey: true }; return next(); }
     } else {
       try {
         const keys = await fs.readdir(STORE.keys);
         for (const f of keys) {
           const k = JSON.parse(await fs.readFile(path.join(STORE.keys, f), "utf-8"));
-          if (k.key === bearer) return next();
+          if (k.key === bearer) { (req as any).user = { uid: k.userId, isApiKey: true }; return next(); }
         }
       } catch (e) {}
     }
+    return res.status(403).json({ error: "Invalid API key." });
   }
 
-  // 2. Firebase ID Token Authentication
+  // Firebase ID token
   if (auth) {
     try {
       const decoded = await auth.verifyIdToken(bearer);
       (req as any).user = decoded;
       return next();
+    } catch (e: any) {
+      console.error(`[AUTH] Token failed: ${e.message}`);
+    }
+  } else if (process.env.NODE_ENV !== "production") {
+    // Dev fallback: decode without verify
+    try {
+      const parts = bearer.split(".");
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
+        (req as any).user = { ...payload, uid: payload.user_id || payload.sub };
+        console.warn(`[AUTH-DEV] Unverified identity accepted: ${payload.email}`);
+        return next();
+      }
     } catch (e) {}
   }
 
-  res.status(403).json({ error: "Access Denied. Identity validation required." });
+  res.status(403).json({ error: "Access denied." });
 };
 
+// Middleware restricting features on deployed version without a promo
+const requireSelfHosted: express.RequestHandler = (req, res, next) => {
+  const uid = (req as any).user?.uid;
+  if (IS_DEPLOYED && !unlockedUsers.has(uid)) {
+     return res.status(403).json({ error: "Feature restricted to Self-Hosted version or Cloud with unlocked perks." });
+  }
+  next();
+};
+
+// ─── Public context-file access (no auth, for AI agents) ─────────────────────
+// Served at GET /api/repo/:id/context.txt — the live LLM-friendly file
+async function getContextFilePath(repoId: string) {
+  return path.join(STORE.files, `${repoId}.txt`);
+}
+
+async function getRepoData(id: string): Promise<any | null> {
+  if (db) {
+    const doc = await db.collection("repositories").doc(id).get();
+    return doc.exists ? doc.data() : null;
+  }
+  try {
+    return JSON.parse(await fs.readFile(path.join(STORE.repos, `${id}.json`), "utf-8"));
+  } catch { return null; }
+}
+
+async function saveRepoData(id: string, payload: any) {
+  if (db) await db.collection("repositories").doc(id).set(payload);
+  else await atomicWrite(path.join(STORE.repos, `${id}.json`), payload);
+}
+
+// ─── Build context .txt file from ingestion ───────────────────────────────────
+function buildContextFile(owner: string, repo: string, summary: string, unifiedContent: string): string {
+  return [
+    `# REPODATA CONTEXT FILE`,
+    `# Repository: ${owner}/${repo}`,
+    `# Generated: ${new Date().toISOString()}`,
+    `# This file is the live, LLM-friendly context for this repository.`,
+    `# It is auto-updated on each sync and editable via the AI tool.`,
+    ``,
+    `## AI SUMMARY`,
+    summary,
+    ``,
+    `## FULL CODEBASE`,
+    unifiedContent,
+  ].join("\n");
+}
+
+// ─── App bootstrap ────────────────────────────────────────────────────────────
 async function start() {
   await bootstrap();
   const app = express();
-  
+
   app.use(compression());
-  app.use(helmet({ 
+  app.use(helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
-    crossOriginResourcePolicy: { policy: "cross-origin" }
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: false,
   }));
-  
   app.use((req, res, next) => {
-    res.setHeader('X-Robots-Tag', 'index, follow');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Cache-Control', 'public, max-age=3600'); // Standard cache
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+    next();
+  });
+  app.use(cors({ origin: "*", methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"] }));
+  app.use(express.json({ limit: "10mb" }));
+
+  // Request logger
+  app.use((req, _res, next) => {
+    console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
     next();
   });
 
-  app.use(cors({ origin: "*", methods: ["GET", "POST", "DELETE", "OPTIONS"] }));
-  app.use(express.json());
-
-  // --- Dynamic Rate Limiting ---
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    max: 1000, 
-    message: { error: "Protocol flooded. Too many requests." },
-    standardHeaders: true,
-    legacyHeaders: false,
+  // ─── Rate limiting (enabled globally for all environments) ──────────
+  const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1000,
+    message: { error: "Too many requests. Try again later." },
+    standardHeaders: true, legacyHeaders: false,
   });
-  app.use("/api", limiter);
+  app.use("/api", generalLimiter);
 
-  app.get("/api/health", async (req, res) => {
-    let writeStatus = "unknown";
-    try {
-      const testFile = path.join(LOCAL_DATA_DIR, ".health");
-      await fs.writeFile(testFile, Date.now().toString());
-      writeStatus = "ok";
-    } catch (e) { writeStatus = "error"; }
+  // Daily limit – 1000 AI actions per day
+  const dailyAiLimiter = rateLimit({
+    windowMs: 24 * 60 * 60 * 1000,
+    max: 1000,
+    keyGenerator: (req) => (req as any).user?.uid || req.ip || "anon",
+    handler: (_req, res) => res.status(429).json({
+      error: "Daily limit reached",
+      message: "Please upgrade your account for more requests.",
+    }),
+    standardHeaders: true, legacyHeaders: false,
+  });
+  app.use("/api/ingest", dailyAiLimiter);
+  app.use("/api/repo/:id/refresh", dailyAiLimiter);
+  app.use("/api/repo/:id/chat", dailyAiLimiter);
+  app.use("/api/repo/:id/ai-edit", dailyAiLimiter);
 
-    res.json({ 
-      status: "active", 
-      version: "3.5.0", 
-      storage: db ? "Cloud" : "Local",
+  console.log("🔒 API Rate limits active (1000 requests).");
+
+  // ─── Health ───────────────────────────────────────────────────────────────
+  app.get("/api/health", async (_req, res) => {
+    let writeStatus = "ok";
+    try { await fs.writeFile(path.join(LOCAL_DATA_DIR, ".health"), Date.now().toString()); }
+    catch { writeStatus = "error"; }
+    res.json({
+      status: "active", version: "4.9.0",
+      storage: db ? "Firebase" : "Local",
+      ai: USE_OLLAMA ? `Ollama (${OLLAMA_MODEL})` : `Gemini (${GEMINI_MODEL})`,
+      rateLimits: IS_DEPLOYED ? "active" : "disabled",
       write: writeStatus,
-      env: process.env.NODE_ENV || "dev"
     });
   });
 
+  // ─── PROMO CODE REDEMPTION ────────────────────────────────────────────────
+  app.post("/api/promo", authenticate, (req, res) => {
+    const { code } = req.body;
+    if (code === "PRO-HOSTED-3X") {
+      if (promoUses > 0) {
+        promoUses--;
+        const uid = (req as any).user?.uid;
+        if (uid) unlockedUsers.add(uid);
+        return res.json({ success: true, message: `Code accepted! Cloud agent features unlocked for your account. (${promoUses} uses remaining globally)` });
+      }
+      return res.status(400).json({ error: "This promo code has already been exhausted." });
+    }
+    return res.status(400).json({ error: "Invalid promo code." });
+  });
+
+  // ─── REPOS ────────────────────────────────────────────────────────────────
   app.get("/api/repos", authenticate, async (req, res) => {
     try {
       if (db) {
         const snap = await db.collection("repositories").get();
         return res.json(snap.docs.map(d => ({ id: d.id, ...d.data().metadata })));
       }
-      const files = await fs.readdir(STORE.repos);
-      const repos = await Promise.all(files.filter(f => f.endsWith('.json')).map(async f => {
-        const data = JSON.parse(await fs.readFile(path.join(STORE.repos, f), "utf-8"));
-        return { id: f.replace('.json', ''), ...data.metadata };
+      const files = (await fs.readdir(STORE.repos)).filter(f => f.endsWith(".json"));
+      const repos = await Promise.all(files.map(async f => {
+        const d = JSON.parse(await fs.readFile(path.join(STORE.repos, f), "utf-8"));
+        return { id: f.replace(".json", ""), ...d.metadata };
       }));
       res.json(repos);
-    } catch (e) { res.status(500).json({ error: "Library list failed." }); }
+    } catch (e) { res.status(500).json({ error: "Library fetch failed." }); }
   });
 
+  // ─── INGEST (initial) ─────────────────────────────────────────────────────
   app.post("/api/ingest", authenticate, async (req, res) => {
     const { url } = req.body;
     const parts = parseGitHubUrl(url);
-    if (!parts) return res.status(400).json({ error: "Invalid Hub URL." });
-    const repoId = crypto.createHash('md5').update(`${parts.owner}/${parts.repo}`).digest('hex');
-    const userGithubToken = req.headers['x-github-token'] as string | undefined;
+    if (!parts) return res.status(400).json({ error: "Invalid GitHub URL." });
+
+    const repoId = crypto.createHash("md5").update(`${parts.owner}/${parts.repo}`).digest("hex");
+    const userGithubToken = req.headers["x-github-token"] as string | undefined;
+    const ollamaModelOverride = req.headers["x-ollama-model"] as string | undefined;
+    const customGeminiKey = req.headers["x-gemini-key"] as string | undefined;
+    const customGeminiModel = req.headers["x-gemini-model"] as string | undefined;
+
     try {
       const ingestion = await ingestRepo(parts.owner, parts.repo, userGithubToken);
-      const summary = await summarizeCodebase(ingestion.unifiedContent);
-      const payload = { 
-        metadata: { name: ingestion.repoName, owner: parts.owner, files: ingestion.files.length, size: ingestion.unifiedContent.length, updatedAt: new Date().toISOString() },
-        perception_map: summary,
-        unified_content: ingestion.unifiedContent
+      const summary   = await summarizeCodebase(ingestion.unifiedContent, { 
+        ollamaModel: ollamaModelOverride, customGeminiKey, customGeminiModel 
+      });
+
+      const payload = {
+        metadata: {
+          name: ingestion.repoName,
+          owner: parts.owner,
+          repo: parts.repo,
+          files: ingestion.files.length,
+          size: ingestion.unifiedContent.length,
+          updatedAt: new Date().toISOString(),
+          lastApiUsage: null,
+          publicAgent: false
+        },
+        perception_map:  summary,
+        unified_content: ingestion.unifiedContent,
       };
-      if (db) await db.collection("repositories").doc(repoId).set(payload);
-      else await atomicWrite(path.join(STORE.repos, `${repoId}.json`), payload);
+
+      await saveRepoData(repoId, payload);
+
+      // Write the context .txt file
+      const contextContent = buildContextFile(parts.owner, parts.repo, summary, ingestion.unifiedContent);
+      await atomicWrite(await getContextFilePath(repoId), contextContent);
+
       res.json({ id: repoId, ...payload });
-    } catch (e: any) { res.status(500).json({ error: "Ingestion failed." }); }
+    } catch (e: any) {
+      console.error("Ingest error:", e);
+      res.status(500).json({ error: e.message || "Ingestion failed." });
+    }
   });
 
-  app.get("/api/keys", authenticate, async (req, res) => {
+  // ─── REFRESH (re-sync existing repo) ─────────────────────────────────────
+  app.post("/api/repo/:id/refresh", authenticate, async (req, res) => {
+    const { id } = req.params;
+    const { url } = req.body; // pass original URL again
+    const parts = parseGitHubUrl(url);
+    if (!parts) return res.status(400).json({ error: "Valid GitHub URL required for refresh." });
+
+    const userGithubToken = req.headers["x-github-token"] as string | undefined;
+    const ollamaModelOverride = req.headers["x-ollama-model"] as string | undefined;
+    const customGeminiKey = req.headers["x-gemini-key"] as string | undefined;
+    const customGeminiModel = req.headers["x-gemini-model"] as string | undefined;
+
+    try {
+      const ingestion = await ingestRepo(parts.owner, parts.repo, userGithubToken);
+      const summary   = await summarizeCodebase(ingestion.unifiedContent, { 
+        ollamaModel: ollamaModelOverride, customGeminiKey, customGeminiModel 
+      });
+
+      const payload = {
+        metadata: {
+          name: ingestion.repoName,
+          owner: parts.owner,
+          repo: parts.repo,
+          files: ingestion.files.length,
+          size: ingestion.unifiedContent.length,
+          updatedAt: new Date().toISOString(),
+          lastApiUsage: new Date().toISOString(),
+          publicAgent: false
+        },
+        perception_map:  summary,
+        unified_content: ingestion.unifiedContent,
+      };
+
+      await saveRepoData(id, payload);
+
+      // Always regenerate the context file on refresh
+      const contextContent = buildContextFile(parts.owner, parts.repo, summary, ingestion.unifiedContent);
+      await atomicWrite(await getContextFilePath(id), contextContent);
+
+      res.json({ id, ...payload, refreshed: true });
+    } catch (e: any) {
+      console.error("Refresh error:", e);
+      res.status(500).json({ error: e.message || "Refresh failed." });
+    }
+  });
+
+  // ─── GET single repo ──────────────────────────────────────────────────────
+  app.get("/api/repo/:id", authenticate, async (req, res) => {
+    const data = await getRepoData(req.params.id);
+    if (!data) return res.status(404).json({ error: "Repo not found." });
+    res.json(data);
+  });
+
+  // ─── CHAT ─────────────────────────────────────────────────────────────────
+  app.post("/api/repo/:id/chat", authenticate, async (req, res) => {
     const user = (req as any).user;
-    const uid = user?.uid;
+    
+    // Cloud limitation: prohibit external API Key agents unless unlocked 
+    if (user?.isApiKey && IS_DEPLOYED && !unlockedUsers.has(user?.uid)) {
+       return res.status(403).json({ error: "Agent API access is restricted to self-hosted versions. Redeem a promo code in Settings to unlock cloud privileges." });
+    }
+
+    const { query, history } = req.body;
+    if (!query) return res.status(400).json({ error: "query is required." });
+
+    const ollamaModelOverride = req.headers["x-ollama-model"] as string | undefined;
+    const customGeminiKey = req.headers["x-gemini-key"] as string | undefined;
+    const customGeminiModel = req.headers["x-gemini-model"] as string | undefined;
+
+    const data = await getRepoData(req.params.id);
+    if (!data) return res.status(404).json({ error: "Repo not found." });
+
+    // Enforce public agent settings
+    if (user?.uid === "public" && !data.metadata.publicAgent) {
+      return res.status(401).json({ error: "Authorization required. The database owner has not enabled public agent access." });
+    }
+
+    try {
+      // update last used API stamp
+      data.metadata.lastApiUsage = new Date().toISOString();
+      await saveRepoData(req.params.id, data);
+
+      const answer = await chatWithCodebase(query, data.unified_content, history || [], { 
+        ollamaModel: ollamaModelOverride, customGeminiKey, customGeminiModel 
+      });
+      res.json({ answer });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || "Chat failed." });
+    }
+  });
+
+  // ─── CONTEXT FILE — public read (for AI agents, no auth needed) ──────────
+  app.get("/api/repo/:id/context.txt", async (req, res) => {
+    try {
+      const filePath = await getContextFilePath(req.params.id);
+      const content = await fs.readFile(filePath, "utf-8");
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache");
+      res.send(content);
+    } catch {
+      res.status(404).json({ error: "Context file not found. Ingest the repo first." });
+    }
+  });
+
+  // ─── CONTEXT FORMATTED JSON (Live Data Structured API) ────────────────────
+  app.get("/api/repo/:id/context.json", async (req, res) => {
+    try {
+      const data = await getRepoData(req.params.id);
+      if (!data) return res.status(404).json({ error: "Repo not found." });
+      
+      const structured: Record<string, string> = {};
+      const parts = (data.unified_content || "").split("[EOF]");
+      for (const p of parts) {
+        const idx = p.indexOf("]\n");
+        if (p.trim().startsWith("[FILE: ") && idx !== -1) {
+          const filepath = p.substring(p.indexOf("[FILE: ") + 7, idx).trim();
+          const content = p.substring(idx + 2).trim();
+          structured[filepath] = content;
+        }
+      }
+      
+      data.metadata.lastApiUsage = new Date().toISOString();
+      await saveRepoData(req.params.id, data);
+      
+      res.json(structured);
+    } catch {
+      res.status(500).json({ error: "Context JSON generation failed." });
+    }
+  });
+
+  // ─── SETTINGS: Public Agent Toggle ─────────────────────────────────────────
+  app.post("/api/repo/:id/public-agent", authenticate, async (req, res) => {
+    const data = await getRepoData(req.params.id);
+    if (!data) return res.status(404).json({ error: "Repo not found." });
+    data.metadata.publicAgent = !!req.body.enabled;
+    await saveRepoData(req.params.id, data);
+    res.json({ success: true, publicAgent: data.metadata.publicAgent });
+  });
+
+  // ─── CONTEXT FILE — update manually ──────────────────────────────────────
+  app.put("/api/repo/:id/context.txt", authenticate, async (req, res) => {
+    const { content } = req.body;
+    if (typeof content !== "string") return res.status(400).json({ error: "content string required." });
+    try {
+      await atomicWrite(await getContextFilePath(req.params.id), content);
+
+      // Also update perception_map in main data
+      const data = await getRepoData(req.params.id);
+      if (data) {
+        data.perception_map = content;
+        data.metadata.updatedAt = new Date().toISOString();
+        await saveRepoData(req.params.id, data);
+      }
+
+      res.json({ success: true, size: content.length });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ─── AI EDIT context file ─────────────────────────────────────────────────
+  app.post("/api/repo/:id/ai-edit", authenticate, async (req, res) => {
+    const { instruction } = req.body;
+    if (!instruction) return res.status(400).json({ error: "instruction required." });
+
+    try {
+      const filePath = await getContextFilePath(req.params.id);
+      let current = "";
+      try { current = await fs.readFile(filePath, "utf-8"); }
+      catch { 
+        const data = await getRepoData(req.params.id);
+        if (data) current = data.unified_content || "";
+      }
+
+      const updated = await aiEditFile(current, instruction);
+      await atomicWrite(filePath, updated);
+
+      res.json({ updated: true, preview: updated.substring(0, 500) });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ─── DOWNLOAD context file ────────────────────────────────────────────────
+  app.get("/api/repo/:id/download", authenticate, async (req, res) => {
+    try {
+      const data = await getRepoData(req.params.id);
+      if (!data) return res.status(404).json({ error: "Repo not found." });
+
+      const filePath = await getContextFilePath(req.params.id);
+      let content: string;
+      try {
+        content = await fs.readFile(filePath, "utf-8");
+      } catch {
+        // Fallback: build on the fly
+        content = buildContextFile(
+          data.metadata.owner,
+          data.metadata.repo || data.metadata.name,
+          data.perception_map,
+          data.unified_content
+        );
+      }
+
+      const filename = `${(data.metadata.name || req.params.id).replace(/\//g, "_")}_context.txt`;
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.send(content);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ─── KEYS ─────────────────────────────────────────────────────────────────
+  app.get("/api/keys", authenticate, requireSelfHosted, async (req, res) => {
+    const uid = (req as any).user?.uid;
     try {
       if (db) {
         const snap = await db.collection("api_keys").where("userId", "==", uid).get();
         return res.json(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       }
-      const files = await fs.readdir(STORE.keys);
-      const keys = await Promise.all(files.map(async f => JSON.parse(await fs.readFile(path.join(STORE.keys, f), "utf-8"))));
-      res.json(keys.filter(k => k.userId === uid || !uid));
-    } catch (e) { res.status(500).json({ error: "Keys fetch failed." }); }
+      const files = (await fs.readdir(STORE.keys)).filter(f => f.endsWith(".json"));
+      const keys  = await Promise.all(files.map(f => fs.readFile(path.join(STORE.keys, f), "utf-8").then(JSON.parse)));
+      res.json(keys.filter((k: any) => k.userId === uid));
+    } catch (e) { res.status(500).json({ error: "Fetch keys failed" }); }
   });
 
-  app.post("/api/keys", authenticate, async (req, res) => {
+  app.post("/api/keys", authenticate, requireSelfHosted, async (req, res) => {
     const { name } = req.body;
-    const user = (req as any).user;
-    const uid = user?.uid || 'anonymous';
-    const key = `rp_live_${crypto.randomBytes(16).toString('hex')}`;
+    const uid = (req as any).user?.uid || "anonymous";
+    const key = `rp_live_${crypto.randomBytes(16).toString("hex")}`;
     const payload = { key, name, userId: uid, createdAt: new Date().toISOString() };
     try {
       if (db) {
         const doc = await db.collection("api_keys").add(payload);
-        res.json({ id: doc.id, ...payload });
-      } else {
-        const id = crypto.randomUUID();
-        await atomicWrite(path.join(STORE.keys, `${id}.json`), { id, ...payload });
-        res.json({ id, ...payload });
+        return res.json({ id: doc.id, ...payload });
       }
-    } catch (e) { res.status(500).json({ error: "Key generation failed." }); }
+      const id = crypto.randomUUID();
+      await atomicWrite(path.join(STORE.keys, `${id}.json`), { id, ...payload });
+      res.json({ id, ...payload });
+    } catch (e) { res.status(500).json({ error: "Key creation failed" }); }
   });
 
-  app.delete("/api/keys/:id", authenticate, async (req, res) => {
+  app.delete("/api/keys/:id", authenticate, requireSelfHosted, async (req, res) => {
     try {
       if (db) await db.collection("api_keys").doc(req.params.id).delete();
       else await fs.unlink(path.join(STORE.keys, `${req.params.id}.json`));
@@ -205,117 +566,44 @@ async function start() {
     } catch (e) { res.status(500).json({ error: "Deletion failed." }); }
   });
 
-  app.get("/api/repo/:id", authenticate, async (req, res) => {
-    try {
-      let data = null;
-      if (db) {
-        const doc = await db.collection("repositories").doc(req.params.id).get();
-        data = doc.exists ? doc.data() : null;
-      } else {
-        const content = await fs.readFile(path.join(STORE.repos, `${req.params.id}.json`), "utf-8");
-        data = JSON.parse(content);
-      }
-      if (!data) return res.status(404).json({ error: "Node not indexed." });
-      res.json(data);
-    } catch (e) { res.status(404).json({ error: "Not found." }); }
-  });
-
-  // --- NEW: AI Chat Endpoint (Fixed missing functionality) ---
-  app.post("/api/repo/:id/chat", authenticate, async (req, res) => {
-    const { query } = req.body;
-    if (!query) return res.status(400).json({ error: "Query required." });
-    
-    try {
-      let data = null;
-      if (db) {
-        const doc = await db.collection("repositories").doc(req.params.id).get();
-        data = doc.exists ? doc.data() : null;
-      } else {
-        const content = await fs.readFile(path.join(STORE.repos, `${req.params.id}.json`), "utf-8");
-        data = JSON.parse(content);
-      }
-      
-      if (!data) return res.status(404).json({ error: "Repository not found." });
-      
-      const answer = await chatWithCodebase(query, data.unified_content);
-      res.json({ answer });
-    } catch (e) {
-      res.status(500).json({ error: "Chat reasoning failed." });
-    }
-  });
-
-  // --- NEW: Random Identifier Plugin Endpoint ---
+  // ─── Plugins ──────────────────────────────────────────────────────────────
   app.post("/api/plugins/random-identifier", authenticate, async (req, res) => {
     const { seed, count } = req.body;
-    if (!seed) return res.status(400).json({ error: "Seed string required." });
-    
+    if (!seed) return res.status(400).json({ error: "seed required." });
     try {
       const identifiers = generateRandomIdentifiers(seed, count || 5);
-      res.json({ 
-        success: true, 
-        timestamp: new Date().toISOString(),
-        identifiers 
-      });
-    } catch (e) {
-      res.status(500).json({ error: "Plugin execution failed." });
-    }
+      res.json({ success: true, timestamp: new Date().toISOString(), identifiers });
+    } catch (e) { res.status(500).json({ error: "Plugin failed." }); }
   });
 
+  // ─── Vite / Static serving ─────────────────────────────────────────────────
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
+    const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa", base: "/" });
     app.use(vite.middlewares);
     app.use("*", async (req, res) => {
       try {
         let template = await fs.readFile(path.resolve("index.html"), "utf-8");
         template = await vite.transformIndexHtml(req.originalUrl, template);
-        
-        // Dynamic SEO Injection for Dev
-        const metaTitle = "Repodata AI | Dev Mode";
-        const metaDesc = "High-fidelity repository ingestion protocol.";
-        template = template
-          .replace(/<title>.*?<\/title>/, `<title>${metaTitle}</title>`)
-          .replace(/<meta name="description" content=".*?" \/>/, `<meta name="description" content="${metaDesc}" />`);
-
         res.status(200).set({ "Content-Type": "text/html" }).end(template);
-      } catch (e: any) {
-        vite.ssrFixStacktrace(e);
-        res.status(500).end(e.stack);
-      }
+      } catch (e: any) { vite.ssrFixStacktrace(e); res.status(500).end(e.stack); }
     });
   } else {
-    // Production static serving with aggressive caching for speed
-    app.use(express.static("dist", { 
-      maxAge: '30d',
-      immutable: true,
-      index: false
-    }));
-    
+    app.use(express.static("dist", { maxAge: "30d", immutable: true, index: false }));
     app.get("*", async (req, res) => {
       try {
-        let template = await fs.readFile(path.resolve("dist", "index.html"), "utf-8");
-        
-        // HIGH PERFORMANCE SEO INJECTION
-        // This ensures crawlers see the right info immediately without running JS
-        const isBuilder = req.path.startsWith('/builder');
-        const title = isBuilder ? "Workbench | Repodata AI" : "Repodata AI | Repository Ingestion for Agents";
-        const desc = isBuilder ? "Analyze your repository with AI." : "The simplest way to prepare GitHub repositories for AI analysis.";
-        
-        template = template
-          .replace(/<title>.*?<\/title>/g, `<title>${title}</title>`)
-          .replace(/<meta name="description" content=".*?" \/>/g, `<meta name="description" content="${desc}" />`);
-          
+        const template = await fs.readFile(path.resolve("dist", "index.html"), "utf-8");
         res.set({ "Content-Type": "text/html" }).send(template);
-      } catch (e) {
-        res.sendFile(path.resolve("dist", "index.html"));
-      }
+      } catch { res.sendFile(path.resolve("dist", "index.html")); }
     });
   }
 
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = Number(process.env.PORT) || 3005;
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`\n🚀 REPODATA PROTOCOL READY`);
-    console.log(`🛰️  Endpoint: http://localhost:${PORT}`);
-    console.log(`📁 Storage:  ${db ? 'Firebase Cloud' : 'Local Cluster (./data)'}\n`);
+    console.log(`\n🚀 REPODATA PROTOCOL v4.8 READY`);
+    console.log(`🛰️  http://localhost:${PORT}`);
+    console.log(`🤖 AI Backend: ${USE_OLLAMA ? `Ollama (${OLLAMA_MODEL}) @ ${process.env.OLLAMA_HOST || "http://localhost:11434"}` : `Gemini (${GEMINI_MODEL})`}`);
+    console.log(`🔒 Rate Limits: ${IS_DEPLOYED ? "ACTIVE (deployed)" : "DISABLED (self-hosted)"}`);
+    console.log(`📁 Storage: ${db ? "Firebase" : "Local (./data)"}\n`);
   });
 }
 

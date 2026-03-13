@@ -4,6 +4,13 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    middlewareMode: true,
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+    },
+  },
   build: {
     target: 'esnext',
     minify: 'terser',
