@@ -8,21 +8,21 @@ export default function About() {
   const sections = [
     {
       id: 'agent',
-      title: 'Smart Assistant',
+      title: 'Structural Analyst',
       icon: Cpu,
-      content: 'Repo Trace uses advanced smart technology to read and understand code. We have a special local helper that handles huge projects so the main analyzer can stay fast and accurate without losing any details.'
+      content: 'Repo Trace utilizes a specialized Structural Analyst agent to decode complex internal patterns. Our industrial-grade ingestion engine ensures high-fidelity project mapping without losing critical architectural nuances.'
     },
     {
       id: 'usage',
-      title: 'How to use',
+      title: 'The Protocol',
       icon: Logo,
-      content: 'Just paste a GitHub link into the analyzer. The system will create a "Project Map" that makes the code easy for an AI to read. You can then chat with your project or edit the map yourself in the workshop area.'
+      content: 'Inject any GitHub URL into the console. The protocol generates a linearized context stream—a "Project Map"—optimized for LLMs. This stream can be consumed via the integrated Agent or our high-performance Builder API.'
     },
     {
       id: 'limits',
-      title: 'Usage Limits',
+      title: 'Protocol Quota',
       icon: Lock,
-      content: 'To maintain server stability, the Repo Trace API enforces a liberal global request limit of 1000 daily AI interactions per account. You can monitor your usage thresholds on your profile dashboard.'
+      content: 'For sustained industrial performance, the Repo Trace API supports 1000 daily structural requests per authenticated node. Quotas reset automatically every 24 hours to ensure fair distributed access.'
     }
   ];
 
@@ -43,11 +43,11 @@ export default function About() {
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#76F1BC]">Help Guide</p>
             </div>
             <h1 className="text-4xl xs:text-5xl md:text-8xl font-black text-white tracking-tighter leading-[1] md:leading-[0.9] uppercase italic max-w-4xl px-2">
-              Easy Code <br className="hidden xs:block" />
-              <span className="text-[#76F1BC]">Understanding.</span>
+              Structural <br className="hidden xs:block" />
+              <span className="text-[#76F1BC]">Protocol.</span>
             </h1>
             <p className="text-base md:text-xl text-zinc-500 font-medium leading-relaxed max-w-2xl px-2 uppercase tracking-widest text-[11px] md:text-sm">
-              Repo Trace is a simple tool that helps you turn messy source code into clear information that AI can understand easily.
+              Repo Trace is the high-fidelity ingestion protocol designed to bridge source code and large language models at scale.
             </p>
           </motion.div>
         </header>
@@ -121,7 +121,7 @@ export default function About() {
 <span className="text-purple-400">import</span> requests{"\n"}
 <span className="text-purple-400">import</span> json{"\n"}{"\n"}
 <span className="text-zinc-500"># Define your request parameters</span>{"\n"}
-url = <span className="text-green-300">"https://Repo Trace.ai/api/repo/YOUR_REPO_ID/chat"</span>{"\n"}
+url = <span className="text-green-300">"https://repotrace.vercel.app/api/repo/YOUR_REPO_ID/chat"</span>{"\n"}
 headers = {"{"}{"\n"}  <span className="text-green-300">"Authorization"</span>: <span className="text-green-300">"Bearer YOUR_API_KEY"</span>,{"\n"}  <span className="text-green-300">"Content-Type"</span>: <span className="text-green-300">"application/json"</span>{"\n"}{"}"}{"\n"}
 payload = {"{"} <span className="text-green-300">"query"</span>: <span className="text-green-300">"Find a way to optimize the auth module."</span> {"}"}{"\n"}{"\n"}
 <span className="text-zinc-500"># Send the structural analysis prompt</span>{"\n"}
@@ -169,10 +169,10 @@ response = requests.post(url, headers=headers, data=json.dumps(payload)){"\n"}{"
             <h3 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase italic mb-8">Ready to <br className="hidden xs:block" /> Analyze?</h3>
             <div className="flex flex-col sm:flex-row lg:flex-col gap-4">
               <Link to="/builder" className="flex-1 py-5 bg-[#76F1BC] text-black text-center rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:scale-[1.02] transition-all shadow-xl">
-                Open Analyzer
+                Open Console
               </Link>
-              <a href="https://github.com/Seltherpython/Repo Trace" target="_blank" className="flex-1 py-5 border border-white/10 text-white text-center rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/5 transition-all">
-                View GitHub Source
+              <a href="https://github.com/Seltherpython/Repo-Trace" target="_blank" className="flex-1 py-5 border border-white/10 text-white text-center rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/5 transition-all">
+                Access Source
               </a>
             </div>
           </div>

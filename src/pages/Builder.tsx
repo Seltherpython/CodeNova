@@ -309,8 +309,8 @@ export default function Builder() {
   return (
     <div className="space-y-4 animate-in pb-16 relative px-4 md:px-6 pt-4 md:pt-6">
       <SEO
-        title={data ? `${data.metadata.name} | AI Code Workbench - Repo Trace` : 'Analyze Your Project | Repo Trace Advanced Code Insights'}
-        description="Decode any GitHub repository with Nova. Get high-fidelity project maps, smart reasoning, and instant code summaries on the Repo Trace workbench."
+        title={data ? `${data.metadata.name} | Repo Trace Protocol` : 'Repo Trace | Structural Code Ingestion'}
+        description="Decode any GitHub repository with the Repo Trace Protocol. Get high-fidelity project maps, smart reasoning, and instant industrial-grade code summaries."
       />
 
       <div>
@@ -319,9 +319,9 @@ export default function Builder() {
             <div className="w-14 h-14 bg-[#76F1BC]/5 rounded-2xl flex items-center justify-center border border-[#76F1BC]/20 mx-auto">
               <Cpu className="w-7 h-7 text-[#76F1BC]" />
             </div>
-            <h1 className="text-2xl md:text-4xl font-black text-white tracking-tighter uppercase italic">Project Analyzer</h1>
+            <h1 className="text-2xl md:text-4xl font-black text-white tracking-tighter uppercase italic">Repo Trace Protocol</h1>
             <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.25em] max-w-xs mx-auto">
-              Paste a GitHub URL below to get started.
+              Inject a GitHub URL to initialize structural analysis.
             </p>
           </div>
         )}
@@ -333,7 +333,7 @@ export default function Builder() {
               <Cpu className={`w-4 h-4 ${isEmpty ? 'text-zinc-300' : 'text-[#76F1BC]'}`} />
             </div>
             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">
-              Project Analyzer <span className="hidden sm:inline">v4.9 Pulse</span>
+              Structural Engine <span className="hidden sm:inline">v5.0 Industrial</span>
             </p>
             {data && (
               <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-zinc-700">
@@ -417,9 +417,9 @@ export default function Builder() {
               <Database className="w-7 h-7 text-[#76F1BC]" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-xl md:text-2xl font-black text-white tracking-tighter uppercase italic">Analyzing…</h2>
+              <h2 className="text-xl md:text-2xl font-black text-white tracking-tighter uppercase italic">Tracing Structure…</h2>
               <p className="text-zinc-500 text-[9px] font-black uppercase tracking-widest max-w-xs mx-auto">
-                Reading files · Nova at work
+                Analyzing Patterns · Repo Trace Agent Active
               </p>
               <div className="w-36 h-0.5 bg-white/5 rounded-full mx-auto overflow-hidden">
                 <motion.div
@@ -692,7 +692,7 @@ export default function Builder() {
                               </div>
                             </div>
                             <p className="text-[11px] text-zinc-500 leading-relaxed">
-                              Issue an instruction and Nova will modify your context file. Changes sync to the live API instantly.
+                              Issue an instruction and the Agent will modify your context file. Changes sync instantly.
                             </p>
                             <div className="space-y-3">
                               <textarea
@@ -717,7 +717,7 @@ export default function Builder() {
               </div>
             </div>
 
-            {/* ── AI Interaction Panel (Nova Chat - Priority on mobile) ── */}
+            {/* ── AI Interaction Panel (Trace Agent - Priority on mobile) ── */}
             <div className="xl:col-span-4 xl:sticky xl:top-24 space-y-5 order-1 xl:order-2">
               <div className="notte-card bg-[#0A0A0A] border-white/5 p-5 md:p-8 h-[500px] md:h-[calc(100vh-160px)] flex flex-col shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#76F1BC]/40 to-transparent" />
@@ -727,7 +727,7 @@ export default function Builder() {
                     <div className="p-1.5 bg-[#76F1BC]/10 rounded-lg">
                       <Zap className="w-3.5 h-3.5 text-[#76F1BC]" />
                     </div>
-                    <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-white">AI HELPER (Nova)</span>
+                    <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-white">REPO TRACE AGENT</span>
                   </div>
                   {messages.length > 0 && (
                     <button onClick={() => { setMessages([]); localStorage.removeItem(`rp_chat_${data.id}`); }}
@@ -742,7 +742,7 @@ export default function Builder() {
                     <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
                       <Command className="w-8 h-8 text-zinc-800" />
                       <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.3em] leading-relaxed italic">
-                        Nova is Ready.<br />Ask about the project.
+                        Agent Online.<br />Initialize structural query.
                       </p>
                     </div>
                   )}
@@ -760,7 +760,7 @@ export default function Builder() {
                         {msg.content}
                       </div>
                       <span className={`text-[7px] font-black uppercase tracking-widest px-1 ${msg.role === 'user' ? 'text-zinc-700' : 'text-[#76F1BC]'}`}>
-                        {msg.role === 'user' ? 'You' : msg.role === 'system' ? 'System' : 'Nova'}
+                        {msg.role === 'user' ? 'You' : msg.role === 'system' ? 'System' : 'Agent'}
                       </span>
                     </motion.div>
                   ))}
@@ -782,7 +782,7 @@ export default function Builder() {
                 <form onSubmit={handleChat} className="relative pt-3 border-t border-white/5">
                   <input
                     type="text"
-                    placeholder="Ask Nova about the codebase…"
+                    placeholder="Ask Trace Agent about the codebase…"
                     value={query}
                     onChange={e => setQuery(e.target.value)}
                     disabled={isQuerying}

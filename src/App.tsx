@@ -379,7 +379,7 @@ const SettingsPage = () => {
         <div className="pt-8 sm:pt-12 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 sm:gap-8 relative z-10">
           <div className="space-y-1.5 sm:space-y-2">
             <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] text-zinc-600">System Version</p>
-            <p className="text-xs sm:text-sm font-black text-white tracking-widest italic">Repo Trace App v4.8.0</p>
+            <p className="text-xs sm:text-sm font-black text-[#76F1BC] tracking-widest italic uppercase">Repo Trace Protocol v5.0.0</p>
           </div>
           <button 
             onClick={logout}

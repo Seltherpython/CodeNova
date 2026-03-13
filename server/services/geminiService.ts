@@ -23,7 +23,7 @@ async function geminiGenerate(prompt: string, opts?: GenerationOptions): Promise
   const genAI = new GoogleGenerativeAI(keyToUse);
   const model = genAI.getGenerativeModel({
     model: opts?.customGeminiModel || GEMINI_MODEL,
-    systemInstruction: "You are Nova, an elite senior software architect and deeply analytical AI engineering assistant. Your core mission is to analyze codebases to identify bugs, surface architectural inefficiencies, and proactively suggest functionality improvements. You are concise, brutally precise, and heavily prioritize technical accuracy, security, and scalability. Provide expert-level insights and actionable, production-ready code solutions."
+    systemInstruction: "You are the Repo Trace AI, an elite structural analysis agent. Your mission is to decode complex codebases into human-readable project maps and provide surgical-grade architectural advice. You are concise, precise, and prioritize security and scalability. Always output production-ready code blocks and favor technical depth over filler."
   });
   const result = await model.generateContent(prompt);
   return result.response.text();
@@ -55,37 +55,36 @@ async function generate(prompt: string, opts?: GenerationOptions): Promise<strin
   return geminiGenerate(prompt, opts);
 }
 
-// ─── Summarize codebase ──────────────────────────────────────────────────────
+// ... (summarizeCodebase excerpt)
 export async function summarizeCodebase(unifiedContent: string, opts?: GenerationOptions): Promise<string> {
   const contentToAnalyze = unifiedContent;
 
-  const prompt = `Nova, execute a deep architectural analysis of the provided codebase.
+  const prompt = `Repo Trace Protocol Execution: Structural Perception.
+Decode this codebase into a high-fidelity summary for a senior engineering team. 
 
-Your objective is to thoroughly audit the project and output a highly structured, technical summary that a senior engineering team can utilize. 
+Format:
+1. **System Architecture**
+2. **Core Functionality**
+3. **Stack & Infrastructure**
+4. **Data Management**
+5. **Critical Components**
+6. **Vulnerabilities/Debt**
+7. **Trace Recommendations** (3-5 high-impact suggestions)
 
-Provide your analysis in the following strict markdown format:
-1. **System Architecture** – High-level structural overview and entry points.
-2. **Core Functionality** – Precise breakdown of what the application does and its main business logic.
-3. **Tech Stack & Tooling** – Technologies, frameworks, and infrastructure used.
-4. **Data Flow & State** – How data is managed, passed, and stored.
-5. **Critical Functions** – Identify the most critical files/functions and what they handle.
-6. **Vulnerabilities & Bottlenecks** – Highlight potential performance issues, technical debt, or structural flaws.
-7. **Actionable Improvements** – Give 3-5 high-impact suggestions to improve the functionality, scalability, or DX of this site.
+Be technical and direct.
 
-Be highly technical and succinct. Do not use filler words.
-
-REPOSITORY RAW CONTENT:
+REPOSITORY CONTENT:
 ${contentToAnalyze}`;
 
   try {
     return await generate(prompt, opts);
   } catch (err: any) {
     console.error("Summarize error:", err);
-    return `## Summary Unavailable\nThe AI backend returned an error: **${err.message || 'Unknown error'}**\n\nEnsure your AI backend (Gemini or Ollama) is correctly configured.`;
+    return `## Structural Protocol Failed\nError: **${err.message || 'Unknown error'}**`;
   }
 }
 
-// ─── Chat with codebase ──────────────────────────────────────────────────────
+// ... (chatWithCodebase excerpt)
 export async function chatWithCodebase(
   query: string,
   context: string,
@@ -94,19 +93,18 @@ export async function chatWithCodebase(
 ): Promise<string> {
   const historyText = history.slice(-10).map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n");
 
-  const prompt = `User's Question: ${query}
+  const prompt = `Analysis Request: ${query}
 
-PROJECT INFO (EXTENDED CONTEXT):
+CONTEXT ACCESS:
 ${context.substring(0, 150000)}
 
-${historyText ? `RECENT CHAT HISTORY:\n${historyText}\n` : ""}
+${historyText ? `PROTOCOL HISTORY:\n${historyText}\n` : ""}
 
-Nova's Operational Guidelines:
-- Answer directly and with high technical precision.
-- Focus exclusively on structural integrity, functionality improvement, and resolving the query.
-- Proactively identify hidden consequences or edge cases related to the user's question.
-- Always provide fully typed, production-ready code examples formatted with triple backticks.
-- If context is missing, clearly state the assumptions made.`;
+Operational Directive:
+- Provide high-precision codebase-specific answers.
+- Use the provided context to identify nuances and edge cases.
+- Format all code with triple backticks and TypeScript types where applicable.
+- Represent the Repo Trace Protocol identity.`;
 
   try {
     return await generate(prompt, opts);

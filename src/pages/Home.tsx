@@ -37,7 +37,7 @@ export default function Home() {
               <div className="flex flex-wrap justify-center gap-3 mb-8">
                 <span className="rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.3em] text-[#76F1BC] bg-[#76F1BC]/5 border border-[#76F1BC]/10 flex items-center gap-2">
                   <span className="flex h-1.5 w-1.5 rounded-full bg-[#76F1BC] animate-pulse" />
-                  System v4.8 Active
+                  System v5.0 Active
                 </span>
                 <span className="rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.3em] text-white/40 bg-white/5 border border-white/10 flex items-center gap-2">
                   <Globe className="w-3 h-3" />
@@ -45,11 +45,11 @@ export default function Home() {
                 </span>
               </div>
               <h1 className="text-4xl xs:text-5xl sm:text-7xl font-black tracking-tighter text-white lg:text-[9rem] mb-6 leading-[0.9] sm:leading-[0.8] uppercase italic px-2">
-                Project <br className="hidden sm:block" />
-                <span className="text-[#76F1BC]">Analysis.</span>
+                Repo <br className="hidden sm:block" />
+                <span className="text-[#76F1BC]">Trace.</span>
               </h1>
-              <p className="mt-8 text-base sm:text-lg leading-relaxed text-zinc-500 max-w-2xl mx-auto font-medium px-4 uppercase tracking-widest">
-                Fast and simple code understanding<br /> for any GitHub project.
+              <p className="mt-8 text-base sm:text-lg leading-relaxed text-zinc-500 max-w-2xl mx-auto font-medium px-4 uppercase tracking-[0.2em] sm:tracking-[0.4em]">
+                High-fidelity ingestion protocol<br /> for the agentic era.
               </p>
               <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-6 px-4">
                 <Link
@@ -67,15 +67,15 @@ export default function Home() {
 
           <div className="mt-24 sm:mt-40 space-y-16 sm:space-y-24">
              <div className="text-center max-w-2xl mx-auto space-y-4 px-4">
-                <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tighter uppercase italic">Simple Code Scanning.</h2>
-                <p className="text-zinc-500 font-medium text-sm">Built for quick code discovery and easy AI help.</p>
+                <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tighter uppercase italic">Structural Ingestion.</h2>
+                <p className="text-zinc-500 font-medium text-sm">Industrial-grade parsing for LLMs and AI Agents.</p>
              </div>
 
              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
                 {[
-                  { title: 'Project Scanning', desc: 'Scan any GitHub project quickly and get a readable summary.', icon: Database },
-                  { title: 'Clear AI Help', desc: 'Ask questions about code and get simple, clear answers.', icon: Activity },
-                  { title: 'Safe & Secure', desc: 'Your code is processed safely and never stored permanently.', icon: ShieldCheck },
+                  { title: 'Repo Protocol', desc: 'Transform entire repositories into linearized, agent-ready context streams.', icon: Database },
+                  { title: 'Trace Reasoning', desc: 'Execute architectural queries via the integrated structural analyst.', icon: Activity },
+                  { title: 'Privacy Shield', desc: 'Secure, ephemeral processing with zero persistent storage overhead.', icon: ShieldCheck },
                 ].map((feature, idx) => (
                   <motion.div 
                     key={feature.title} 
