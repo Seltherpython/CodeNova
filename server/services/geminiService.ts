@@ -6,8 +6,8 @@ export const USE_OLLAMA = process.env.USE_OLLAMA === "true";
 export const OLLAMA_HOST = process.env.OLLAMA_HOST || "http://localhost:11434";
 export const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3"; // Defaulting to llama3
 
-// User specifically asked for Gemini 3.1 Flash Lite Preview
-export const GEMINI_MODEL = "gemini-3.1-flash-lite-preview";
+// Recommended model for balance of speed and reasoning
+export const GEMINI_MODEL = "gemini-2.0-flash";
 const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
 
 interface GenerationOptions {
@@ -110,7 +110,7 @@ Operational Directive:
     return await generate(prompt, opts);
   } catch (err: any) {
     console.error("Chat error:", err);
-    throw new Error(`Nova's reasoning failed: ${err.message}`);
+    throw new Error(`Repo Trace AI's reasoning failed: ${err.message}`);
   }
 }
 
@@ -131,6 +131,6 @@ Note: Apply the instruction and return the COMPLETE updated file contents ONLY. 
     return await generate(prompt, opts);
   } catch (err: any) {
     console.error("AI edit error:", err);
-    throw new Error(`Nova's file edit failed: ${err.message}`);
+    throw new Error(`Repo Trace AI's file edit failed: ${err.message}`);
   }
 }

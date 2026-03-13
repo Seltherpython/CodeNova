@@ -10,7 +10,6 @@ import crypto from "crypto";
 
 import { ingestRepo, parseGitHubUrl } from "../server/services/githubService.js";
 import { summarizeCodebase, chatWithCodebase, aiEditFile, USE_OLLAMA, OLLAMA_MODEL, GEMINI_MODEL } from "../server/services/geminiService.js";
-import { generateRandomIdentifiers } from "../server/services/pluginService.js";
 
 // --- Firebase Initialization ---
 let db: admin.firestore.Firestore | null = null;
@@ -34,31 +33,23 @@ let promoUses = 3;
 
 async function syncPromoState() {
   if (db) {
-    const doc = await db.collection("system").doc("promo_state").get();
-    if (doc.exists) {
-      const data = doc.data() as any;
-      promoUses = data?.uses !== undefined ? data.uses : 3;
-      unlockedUsers = new Set(data?.unlocked || []);
-    }
+    try {
+      const doc = await db.collection("system").doc("promo_state").get();
+      if (doc.exists) {
+        const data = doc.data() as any;
+        promoUses = data?.uses !== undefined ? data.uses : 3;
+        unlockedUsers = new Set(data?.unlocked || []);
+      }
+    } catch (e) { console.error("Sync Promo Error", e); }
   }
 }
 
 async function updatePromoState() {
   if (db) {
-    await db.collection("system").doc("promo_state").set({ uses: promoUses, unlocked: Array.from(unlockedUsers) });
+    try {
+      await db.collection("system").doc("promo_state").set({ uses: promoUses, unlocked: Array.from(unlockedUsers) });
+    } catch (e) { console.error("Update Promo Error", e); }
   }
-}
-
-const STORE = {
-  repos: "/tmp/repositories",
-  keys:  "/tmp/api_keys",
-  files: "/tmp/context_files",
-};
-
-async function bootstrap() {
-  await fs.mkdir(STORE.repos,  { recursive: true });
-  await fs.mkdir(STORE.keys,   { recursive: true });
-  await fs.mkdir(STORE.files,  { recursive: true });
 }
 
 // --- Middleware ---
@@ -67,7 +58,7 @@ const authenticate: express.RequestHandler = async (req, res, next) => {
   const bearer = (req.headers.authorization || "").split(" ")[1];
   
   if (!bearer) {
-    if (req.path.endsWith("/chat")) {
+    if (req.path.includes("/chat")) {
        (req as any).user = { uid: "public" };
        return next();
     }
@@ -96,7 +87,7 @@ const app = express();
 app.use(compression());
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: "*", methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"] }));
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "20mb" }));
 
 const sanitizeString = (str: string) => str.replace(/<{1}[^<>]{0,}>{1}/g, "").trim();
 const sanitize: express.RequestHandler = (req, res, next) => {
@@ -115,7 +106,13 @@ v1.use(sanitize);
 // --- Handlers ---
 v1.get("/health", async (_req, res) => {
   await syncPromoState();
-  res.json({ status: "active", version: "1.0.0-beta", serverless: true, promoExhausted: promoUses <= 0 });
+  res.json({ 
+    status: "active", 
+    version: "1.0.0-beta", 
+    serverless: true, 
+    promoExhausted: promoUses <= 0,
+    timestamp: new Date().toISOString()
+  });
 });
 
 v1.post("/promo", authenticate, async (req, res) => {
@@ -128,7 +125,7 @@ v1.post("/promo", authenticate, async (req, res) => {
         promoUses--;
         unlockedUsers.add(uid);
         await updatePromoState();
-        return res.json({ success: true, message: "Code accepted!" });
+        return res.json({ success: true, message: "Code accepted! v1 features unlocked." });
       } else if (uid && unlockedUsers.has(uid)) {
         return res.json({ success: true, message: "Already unlocked." });
       }
@@ -140,8 +137,10 @@ v1.post("/promo", authenticate, async (req, res) => {
 
 v1.get("/repos", authenticate, async (req, res) => {
   if (db) {
-    const snap = await db.collection("repositories").get();
-    return res.json(snap.docs.map(d => ({ id: d.id, ...d.data().metadata })));
+    try {
+      const snap = await db.collection("repositories").get();
+      return res.json(snap.docs.map(d => ({ id: d.id, ...d.data().metadata })));
+    } catch (e) { return res.status(500).json({ error: "Fetch failed." }); }
   }
   res.json([]);
 });
@@ -178,18 +177,41 @@ v1.post("/repo/:id/chat", authenticate, async (req, res) => {
      return res.status(403).json({ error: "Agent API access restricted." });
   }
   const { query, history } = req.body;
-  if (db) {
-    const doc = await db.collection("repositories").doc(req.params.id).get();
-    if (doc.exists) {
-      const data = doc.data() as any;
-      const answer = await chatWithCodebase(query, data.unified_content, history || []);
-      return res.json({ answer });
+  try {
+    if (db) {
+      const doc = await db.collection("repositories").doc(req.params.id).get();
+      if (doc.exists) {
+        const data = doc.data() as any;
+        const answer = await chatWithCodebase(query, data.unified_content, history || []);
+        return res.json({ answer });
+      }
     }
+    res.status(404).json({ error: "Project not found in structural index." });
+  } catch (e: any) {
+    console.error("Chat API Error:", e);
+    res.status(500).json({ error: e.message || "AI Reasoning Failed." });
   }
-  res.status(404).json({ error: "Not found." });
 });
 
-app.use("/v1", v1);
-app.use("/", v1);
+v1.post("/repo/:id/ai-edit", authenticate, async (req, res) => {
+  const { instruction } = req.body;
+  if (!instruction) return res.status(400).json({ error: "instruction required." });
+  try {
+    if (db) {
+      const doc = await db.collection("repositories").doc(req.params.id).get();
+      if (doc.exists) {
+        const data = doc.data() as any;
+        const updated = await aiEditFile(data.unified_content, instruction);
+        return res.json({ success: true, updated });
+      }
+    }
+    res.status(404).json({ error: "Project not found." });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.use("/api/v1", v1);
+app.use("/api", v1);
 
 export default app;
