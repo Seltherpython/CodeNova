@@ -140,7 +140,7 @@ async function getContextFilePath(repoId: string) {
   return path.join(STORE.files, `${repoId}.txt`);
 }
 
-async function getRepoData(id: string): Promise<any | null> {
+async function getCodeNova(id: string): Promise<any | null> {
   if (db) {
     const doc = await db.collection("repositories").doc(id).get();
     return doc.exists ? doc.data() : null;
@@ -150,7 +150,7 @@ async function getRepoData(id: string): Promise<any | null> {
   } catch { return null; }
 }
 
-async function saveRepoData(id: string, payload: any) {
+async function saveCodeNova(id: string, payload: any) {
   if (db) await db.collection("repositories").doc(id).set(payload);
   else await atomicWrite(path.join(STORE.repos, `${id}.json`), payload);
 }
@@ -158,7 +158,7 @@ async function saveRepoData(id: string, payload: any) {
 // ─── Build context .txt file from ingestion ───────────────────────────────────
 function buildContextFile(owner: string, repo: string, summary: string, unifiedContent: string): string {
   return [
-    `# REPODATA CONTEXT FILE`,
+    `# CodeNova CONTEXT FILE`,
     `# Repository: ${owner}/${repo}`,
     `# Generated: ${new Date().toISOString()}`,
     `# This file is the live, LLM-friendly context for this repository.`,
@@ -303,7 +303,7 @@ async function start() {
         unified_content: ingestion.unifiedContent,
       };
 
-      await saveRepoData(repoId, payload);
+      await saveCodeNova(repoId, payload);
 
       // Write the context .txt file
       const contextContent = buildContextFile(parts.owner, parts.repo, summary, ingestion.unifiedContent);
@@ -349,7 +349,7 @@ async function start() {
         unified_content: ingestion.unifiedContent,
       };
 
-      await saveRepoData(id, payload);
+      await saveCodeNova(id, payload);
 
       // Always regenerate the context file on refresh
       const contextContent = buildContextFile(parts.owner, parts.repo, summary, ingestion.unifiedContent);
@@ -364,7 +364,7 @@ async function start() {
 
   // ─── GET single repo ──────────────────────────────────────────────────────
   app.get("/api/repo/:id", authenticate, async (req, res) => {
-    const data = await getRepoData(req.params.id);
+    const data = await getCodeNova(req.params.id);
     if (!data) return res.status(404).json({ error: "Repo not found." });
     res.json(data);
   });
@@ -385,7 +385,7 @@ async function start() {
     const customGeminiKey = req.headers["x-gemini-key"] as string | undefined;
     const customGeminiModel = req.headers["x-gemini-model"] as string | undefined;
 
-    const data = await getRepoData(req.params.id);
+    const data = await getCodeNova(req.params.id);
     if (!data) return res.status(404).json({ error: "Repo not found." });
 
     // Enforce public agent settings
@@ -396,7 +396,7 @@ async function start() {
     try {
       // update last used API stamp
       data.metadata.lastApiUsage = new Date().toISOString();
-      await saveRepoData(req.params.id, data);
+      await saveCodeNova(req.params.id, data);
 
       const answer = await chatWithCodebase(query, data.unified_content, history || [], { 
         ollamaModel: ollamaModelOverride, customGeminiKey, customGeminiModel 
@@ -423,7 +423,7 @@ async function start() {
   // ─── CONTEXT FORMATTED JSON (Live Data Structured API) ────────────────────
   app.get("/api/repo/:id/context.json", async (req, res) => {
     try {
-      const data = await getRepoData(req.params.id);
+      const data = await getCodeNova(req.params.id);
       if (!data) return res.status(404).json({ error: "Repo not found." });
       
       const structured: Record<string, string> = {};
@@ -438,7 +438,7 @@ async function start() {
       }
       
       data.metadata.lastApiUsage = new Date().toISOString();
-      await saveRepoData(req.params.id, data);
+      await saveCodeNova(req.params.id, data);
       
       res.json(structured);
     } catch {
@@ -448,10 +448,10 @@ async function start() {
 
   // ─── SETTINGS: Public Agent Toggle ─────────────────────────────────────────
   app.post("/api/repo/:id/public-agent", authenticate, async (req, res) => {
-    const data = await getRepoData(req.params.id);
+    const data = await getCodeNova(req.params.id);
     if (!data) return res.status(404).json({ error: "Repo not found." });
     data.metadata.publicAgent = !!req.body.enabled;
-    await saveRepoData(req.params.id, data);
+    await saveCodeNova(req.params.id, data);
     res.json({ success: true, publicAgent: data.metadata.publicAgent });
   });
 
@@ -463,11 +463,11 @@ async function start() {
       await atomicWrite(await getContextFilePath(req.params.id), content);
 
       // Also update perception_map in main data
-      const data = await getRepoData(req.params.id);
+      const data = await getCodeNova(req.params.id);
       if (data) {
         data.perception_map = content;
         data.metadata.updatedAt = new Date().toISOString();
-        await saveRepoData(req.params.id, data);
+        await saveCodeNova(req.params.id, data);
       }
 
       res.json({ success: true, size: content.length });
@@ -486,7 +486,7 @@ async function start() {
       let current = "";
       try { current = await fs.readFile(filePath, "utf-8"); }
       catch { 
-        const data = await getRepoData(req.params.id);
+        const data = await getCodeNova(req.params.id);
         if (data) current = data.unified_content || "";
       }
 
@@ -502,7 +502,7 @@ async function start() {
   // ─── DOWNLOAD context file ────────────────────────────────────────────────
   app.get("/api/repo/:id/download", authenticate, async (req, res) => {
     try {
-      const data = await getRepoData(req.params.id);
+      const data = await getCodeNova(req.params.id);
       if (!data) return res.status(404).json({ error: "Repo not found." });
 
       const filePath = await getContextFilePath(req.params.id);
@@ -599,7 +599,7 @@ async function start() {
 
   const PORT = Number(process.env.PORT) || 3005;
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`\n🚀 REPODATA PROTOCOL v4.8 READY`);
+    console.log(`\n🚀 CodeNova PROTOCOL v4.8 READY`);
     console.log(`🛰️  http://localhost:${PORT}`);
     console.log(`🤖 AI Backend: ${USE_OLLAMA ? `Ollama (${OLLAMA_MODEL}) @ ${process.env.OLLAMA_HOST || "http://localhost:11434"}` : `Gemini (${GEMINI_MODEL})`}`);
     console.log(`🔒 Rate Limits: ${IS_DEPLOYED ? "ACTIVE (deployed)" : "DISABLED (self-hosted)"}`);

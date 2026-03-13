@@ -18,7 +18,7 @@ export default function Home() {
 
   return (
     <div className="relative isolate overflow-hidden bg-black min-h-screen">
-      <SEO title="Repodata AI | Professional GitHub Repository Analysis" description="Unlock the secrets of any GitHub repository with Repodata AI. Get fast, reliable, and high-fidelity code analysis integrated with advanced AI models." />
+      <SEO title="CodeNova | Professional GitHub Repository Analysis" description="Unlock the secrets of any GitHub repository with CodeNova. Get fast, reliable, and high-fidelity code analysis integrated with advanced AI models." />
       
       {/* Background decoration */}
       <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">

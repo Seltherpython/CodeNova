@@ -10,11 +10,11 @@ interface SEOProps {
 
 export default function SEO({ 
   title, 
-  description = 'Repodata AI is a professional tool to understand any GitHub project. Get fast, clear, and free code analysis for developers and AI enthusiasts alike.', 
+  description = 'CodeNova is a professional tool to understand any GitHub project. Get fast, clear, and free code analysis for developers and AI enthusiasts alike.', 
   canonical,
   ogType = 'website'
 }: SEOProps) {
-  const [hostname, setHostname] = useState('repodata.ai');
+  const [hostname, setHostname] = useState('CodeNova.ai');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -22,12 +22,12 @@ export default function SEO({
       if (currentHost !== 'localhost' && currentHost !== '127.0.0.1' && currentHost !== '') {
         setHostname(currentHost);
       } else {
-        setHostname('repodata.ai');
+        setHostname('CodeNova.ai');
       }
     }
   }, []);
 
-  const siteName = 'Repodata AI';
+  const siteName = 'CodeNova';
   
   // SEO Fix: Ensure title is longer and more descriptive than 11 characters
   const displayTitle = title 
@@ -50,7 +50,7 @@ export default function SEO({
 
       {/* Language & Publisher */}
       <html lang="en" />
-      <meta name="author" content="Repodata AI" />
+      <meta name="author" content="CodeNova" />
       <link rel="publisher" href={`https://${hostname}`} />
 
       {/* Open Graph / Facebook */}
@@ -66,6 +66,9 @@ export default function SEO({
       <meta property="twitter:url" content={fullCanonical} />
       <meta property="twitter:title" content={displayTitle} />
       <meta property="twitter:description" content={description} />
+      
+      {/* Canonical URL */}
+      <link rel="canonical" href="https://www.repodata.vercel.app" />
 
       {/* Security & Crawling */}
       <meta name="robots" content="index, follow" />

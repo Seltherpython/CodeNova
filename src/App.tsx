@@ -90,7 +90,7 @@ const DatabasePage = () => {
 
   return (
     <div className="space-y-8 sm:space-y-12 animate-in pb-20 px-4 md:px-8 pt-4 md:pt-8 w-full">
-      <SEO title="Project Library | Repodata AI Personal Repository Index" description="Browse and manage your ingested GitHub repositories. Access high-fidelity code summaries and deep-dive analysis for all your saved projects." />
+      <SEO title="Project Library | CodeNova Personal Repository Index" description="Browse and manage your ingested GitHub repositories. Access high-fidelity code summaries and deep-dive analysis for all your saved projects." />
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 px-1">
         <div className="space-y-1 md:space-y-2">
           <h1 className="text-2xl xs:text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase italic">Project Library</h1>
@@ -209,7 +209,7 @@ const APIKeysPage = () => {
 
   return (
     <div className="space-y-8 sm:space-y-12 animate-in pb-20 px-4 md:px-8 pt-4 md:pt-8 w-full">
-      <SEO title="API Access Controls | Manage Your Repodata AI Secret Keys" description="Generate and manage secure API keys to connect Repodata AI with your favorite developer tools and external agents like Claude or OpenAI." />
+      <SEO title="API Access Controls | Manage Your CodeNova Secret Keys" description="Generate and manage secure API keys to connect CodeNova with your favorite developer tools and external agents like Claude or OpenAI." />
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 px-1">
         <div className="space-y-1 md:space-y-2">
           <h1 className="text-2xl xs:text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase italic">API Keys</h1>
@@ -296,10 +296,38 @@ const APIKeysPage = () => {
 };
 
 const SettingsPage = () => {
-  const { profile, logout } = useAuth();
+  const { profile, logout, getToken } = useAuth();
+  const [promoCode, setPromoCode] = useState('');
+  const [promoMessage, setPromoMessage] = useState('');
+  const [isRedeeming, setIsRedeeming] = useState(false);
+
+  const handleRedeem = async () => {
+    if (!promoCode) return;
+    setIsRedeeming(true);
+    setPromoMessage('');
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ code: promoCode.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPromoMessage(data.message);
+        setPromoCode('');
+      } else {
+        setPromoMessage(data.error || 'Failed to redeem code.');
+      }
+    } catch (err: any) {
+      setPromoMessage(err.message || 'Error occurred while redeeming.');
+    } finally {
+      setIsRedeeming(false);
+    }
+  };
   return (
     <div className="space-y-8 sm:space-y-12 animate-in max-w-3xl mx-auto pb-20 px-4 md:px-8 pt-4 md:pt-8">
-      <SEO title="Account Settings | User Profile and System Status - Repodata AI" description="Manage your user profile, view system version details, and monitor your account status on the Repodata AI professional code analysis platform." />
+      <SEO title="Account Settings | User Profile and System Status - CodeNova" description="Manage your user profile, view system version details, and monitor your account status on the CodeNova professional code analysis platform." />
       <div className="space-y-1 md:space-y-2 px-1">
         <h1 className="text-2xl xs:text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase italic">My Profile</h1>
         <p className="text-[11px] sm:text-sm text-zinc-500 font-medium">Account details and environment settings.</p>
@@ -321,7 +349,7 @@ const SettingsPage = () => {
           </div>
           <div className="space-y-2 sm:space-y-3 text-center sm:text-left">
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tighter uppercase">{profile?.name || 'User'}</h2>
-            <p className="text-xs sm:text-sm text-zinc-500 font-bold tracking-tight break-all">{profile?.email || 'unlisted@repodata.ai'}</p>
+            <p className="text-xs sm:text-sm text-zinc-500 font-bold tracking-tight break-all">{profile?.email || 'unlisted@CodeNova.ai'}</p>
             <div className="flex items-center justify-center sm:justify-start gap-2 mt-4 sm:mt-6 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-[#76F1BC] bg-[#76F1BC]/5 border border-[#76F1BC]/20 px-4 sm:px-5 py-2 rounded-full w-fit mx-auto sm:mx-0">
               <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Account Verified
             </div>
@@ -331,7 +359,7 @@ const SettingsPage = () => {
         <div className="pt-8 sm:pt-12 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 sm:gap-8 relative z-10">
           <div className="space-y-1.5 sm:space-y-2">
             <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] text-zinc-600">System Version</p>
-            <p className="text-xs sm:text-sm font-black text-white tracking-widest italic">Repodata App v4.8.0</p>
+            <p className="text-xs sm:text-sm font-black text-white tracking-widest italic">CodeNova App v4.8.0</p>
           </div>
           <button 
             onClick={logout}
@@ -339,6 +367,31 @@ const SettingsPage = () => {
           >
             Terminate Session <LogOut className="w-4 h-4" />
           </button>
+        </div>
+
+        <div className="pt-8 border-t border-white/10 relative z-10 space-y-4">
+          <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] text-zinc-600">Redeem Promotion Code</p>
+          <div className="flex gap-2">
+            <input 
+              type="text" 
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              placeholder="e.g. PRO-HOSTED-3X"
+              className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#76F1BC] transition-colors"
+            />
+            <button 
+              onClick={handleRedeem}
+              disabled={isRedeeming || !promoCode}
+              className="px-6 py-3 bg-[#76F1BC] text-black rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#5EDBA8] transition-colors disabled:opacity-50"
+            >
+              {isRedeeming ? 'Verifying...' : 'Redeem'}
+            </button>
+          </div>
+          {promoMessage && (
+            <p className={`text-xs font-medium uppercase tracking-widest ${promoMessage.includes('error') || promoMessage.includes('Failed') ? 'text-red-400' : 'text-[#76F1BC]'}`}>
+              {promoMessage}
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -353,7 +406,7 @@ const Footer = () => (
           <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#76F1BC] rounded-xl flex items-center justify-center text-black shadow-[0_0_20px_rgba(118,241,188,0.3)]">
             <Terminal className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <span className="font-black text-xl sm:text-2xl tracking-tighter text-white uppercase italic">REPODATA</span>
+          <span className="font-black text-xl sm:text-2xl tracking-tighter text-white uppercase italic">CodeNova</span>
         </Link>
         <p className="text-sm text-zinc-500 font-medium max-w-sm leading-relaxed">
           Simple tool for understanding GitHub code and preparing datasets for AI. Free forever.
@@ -370,14 +423,14 @@ const Footer = () => (
       <div>
          <h4 className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] text-white mb-5 sm:mb-8">Source</h4>
          <ul className="space-y-3 sm:space-y-4">
-           <li><a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-xs sm:text-sm font-bold text-zinc-600 hover:text-[#76F1BC] transition-colors text-decoration-none">GitHub</a></li>
+           <li><a href="https://github.com/Seltherpython/CodeNova" target="_blank" rel="noopener noreferrer" className="text-xs sm:text-sm font-bold text-zinc-600 hover:text-[#76F1BC] transition-colors text-decoration-none">GitHub</a></li>
            <li><Link to="/about" className="text-xs sm:text-sm font-bold text-zinc-600 hover:text-[#76F1BC] transition-colors text-decoration-none">Security</Link></li>
            <li><Link to="/about" className="text-xs sm:text-sm font-bold text-zinc-600 hover:text-[#76F1BC] transition-colors text-decoration-none">License</Link></li>
          </ul>
       </div>
     </div>
     <div className="max-w-7xl mx-auto px-6 lg:px-8 mt-12 sm:mt-24 pt-8 sm:pt-12 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] text-zinc-700">
-       <span>© 2026 Repodata · Open Source</span>
+       <span>© 2026 CodeNova · Open Source</span>
        <div className="flex items-center gap-4 sm:gap-6">
          <span className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 border border-white/5 rounded-full bg-white/[0.01]">
            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#76F1BC] animate-pulse" /> System Live 
@@ -428,7 +481,7 @@ export default function App() {
             <div className="w-8 h-8 md:w-10 md:h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-[#76F1BC] group-hover:bg-[#76F1BC] group-hover:text-black transition-all">
               <Terminal className="w-4 h-4 md:w-5 md:h-5" />
             </div>
-            <span className="font-black text-lg md:text-xl tracking-tighter text-white uppercase italic">REPODATA</span>
+            <span className="font-black text-lg md:text-xl tracking-tighter text-white uppercase italic">CodeNova</span>
           </Link>
           <div className="flex md:hidden">
              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white p-2">
@@ -501,7 +554,7 @@ export default function App() {
             <div className="w-8 h-8 bg-[#76F1BC] rounded-lg flex items-center justify-center text-black">
               <Terminal className="w-4 h-4" />
             </div>
-            <span className="font-black text-sm tracking-tighter text-white uppercase italic">REPODATA</span>
+            <span className="font-black text-sm tracking-tighter text-white uppercase italic">CodeNova</span>
           </Link>
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -534,7 +587,7 @@ export default function App() {
                   <div className="w-10 h-10 bg-[#76F1BC] rounded-xl flex items-center justify-center text-black">
                     <Terminal className="w-5 h-5" />
                   </div>
-                  <span className="font-black text-lg tracking-tighter text-white uppercase italic">REPODATA</span>
+                  <span className="font-black text-lg tracking-tighter text-white uppercase italic">CodeNova</span>
                 </Link>
                 <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 rounded-lg hover:bg-white/10 text-zinc-500">
                   <X className="w-4 h-4" />
@@ -580,7 +633,7 @@ export default function App() {
           <div className="w-10 h-10 bg-[#76F1BC] rounded-xl flex items-center justify-center text-black group-hover:scale-105 transition-transform">
             <Terminal className="w-5 h-5" />
           </div>
-          <span className="font-black text-lg tracking-tighter text-white uppercase italic">REPODATA</span>
+          <span className="font-black text-lg tracking-tighter text-white uppercase italic">CodeNova</span>
         </Link>
         <nav className="flex items-center gap-2">
           {navItems.map((item) => (

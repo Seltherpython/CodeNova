@@ -42,7 +42,7 @@ export async function ingestRepo(owner: string, repo: string, userToken?: string
   
   const headers: Record<string, string> = {
     'Accept': 'application/vnd.github+json',
-    'User-Agent': 'Repodata-Discovery-Engine/4.8',
+    'User-Agent': 'CodeNova-Discovery-Engine/4.8',
   };
   
   if (token) {

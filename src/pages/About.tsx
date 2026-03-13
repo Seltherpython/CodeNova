@@ -9,7 +9,7 @@ export default function About() {
       id: 'agent',
       title: 'Smart Assistant',
       icon: Cpu,
-      content: 'Repodata uses advanced smart technology to read and understand code. We have a special local helper that handles huge projects so the main analyzer can stay fast and accurate without losing any details.'
+      content: 'CodeNova uses advanced smart technology to read and understand code. We have a special local helper that handles huge projects so the main analyzer can stay fast and accurate without losing any details.'
     },
     {
       id: 'usage',
@@ -21,13 +21,13 @@ export default function About() {
       id: 'limits',
       title: 'Usage Limits',
       icon: Lock,
-      content: 'To maintain server stability, the Repodata AI API enforces a liberal global request limit of 1000 daily AI interactions per account. You can monitor your usage thresholds on your profile dashboard.'
+      content: 'To maintain server stability, the CodeNova API enforces a liberal global request limit of 1000 daily AI interactions per account. You can monitor your usage thresholds on your profile dashboard.'
     }
   ];
 
   return (
     <div className="min-h-screen bg-black">
-      <SEO title="Documentation & Guide | Learn How to Use Repodata AI Effectively" description="Discover the power of Repodata AI. Our comprehensive guide explains how to analyze GitHub projects, chat with codebases, and manage your private library." />
+      <SEO title="Documentation & Guide | Learn How to Use CodeNova Effectively" description="Discover the power of CodeNova. Our comprehensive guide explains how to analyze GitHub projects, chat with codebases, and manage your private library." />
       
       <div className="max-w-7xl mx-auto px-6 lg:px-12 py-12 md:py-24">
         {/* Header Section */}
@@ -46,7 +46,7 @@ export default function About() {
               <span className="text-[#76F1BC]">Understanding.</span>
             </h1>
             <p className="text-base md:text-xl text-zinc-500 font-medium leading-relaxed max-w-2xl px-2 uppercase tracking-widest text-[11px] md:text-sm">
-              Repodata is a simple tool that helps you turn messy source code into clear information that AI can understand easily.
+              CodeNova is a simple tool that helps you turn messy source code into clear information that AI can understand easily.
             </p>
           </motion.div>
         </header>
@@ -82,7 +82,7 @@ export default function About() {
           </div>
           <div className="notte-card p-8 md:p-12 bg-white/[0.01] border border-white/5 rounded-3xl md:rounded-[2rem] space-y-12">
             <p className="text-sm md:text-base text-zinc-400 font-bold max-w-3xl leading-relaxed">
-              Repodata shines when used directly inside your own applications, IDE plugins, or external agent tools (like Claude Code or Cursor). Here is the step-by-step required to consume your repository AI context natively.
+              CodeNova shines when used directly inside your own applications, IDE plugins, or external agent tools (like Claude Code or Cursor). Here is the step-by-step required to consume your repository AI context natively.
             </p>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -120,7 +120,7 @@ export default function About() {
 <span className="text-purple-400">import</span> requests{"\n"}
 <span className="text-purple-400">import</span> json{"\n"}{"\n"}
 <span className="text-zinc-500"># Define your request parameters</span>{"\n"}
-url = <span className="text-green-300">"https://repodata.ai/api/repo/YOUR_REPO_ID/chat"</span>{"\n"}
+url = <span className="text-green-300">"https://CodeNova.ai/api/repo/YOUR_REPO_ID/chat"</span>{"\n"}
 headers = {"{"}{"\n"}  <span className="text-green-300">"Authorization"</span>: <span className="text-green-300">"Bearer rp_live_abc123..."</span>,{"\n"}  <span className="text-green-300">"Content-Type"</span>: <span className="text-green-300">"application/json"</span>{"\n"}{"}"}{"\n"}
 payload = {"{"} <span className="text-green-300">"query"</span>: <span className="text-green-300">"Find a way to optimize the auth module."</span> {"}"}{"\n"}{"\n"}
 <span className="text-zinc-500"># Send the structural analysis prompt</span>{"\n"}
@@ -170,7 +170,7 @@ response = requests.post(url, headers=headers, data=json.dumps(payload)){"\n"}{"
               <Link to="/builder" className="flex-1 py-5 bg-[#76F1BC] text-black text-center rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:scale-[1.02] transition-all shadow-xl">
                 Open Analyzer
               </Link>
-              <a href="https://github.com" target="_blank" className="flex-1 py-5 border border-white/10 text-white text-center rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/5 transition-all">
+              <a href="https://github.com/Seltherpython/CodeNova" target="_blank" className="flex-1 py-5 border border-white/10 text-white text-center rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/5 transition-all">
                 View GitHub Source
               </a>
             </div>
@@ -184,7 +184,7 @@ response = requests.post(url, headers=headers, data=json.dumps(payload)){"\n"}{"
               <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center">
                 <Terminal className="w-4 h-4 text-[#76F1BC]" />
               </div>
-              <span className="font-black text-white uppercase italic">REPODATA</span>
+              <span className="font-black text-white uppercase italic">CodeNova</span>
             </div>
             <p className="text-[10px] text-zinc-600 font-bold leading-relaxed uppercase tracking-widest">
               Built for simple code help and easy developer workflows.
@@ -194,7 +194,7 @@ response = requests.post(url, headers=headers, data=json.dumps(payload)){"\n"}{"
             <div>
               <h4 className="text-[10px] font-black text-white uppercase tracking-[0.3em] mb-4">Support</h4>
               <p className="text-sm text-zinc-500 font-bold leading-relaxed">
-                Repodata is open to everyone. You can find us on GitHub if you want to help make the code smarter.
+                CodeNova is open to everyone. You can find us on GitHub if you want to help make the code smarter.
               </p>
             </div>
             <div>

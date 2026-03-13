@@ -6,7 +6,7 @@ import App from './App.tsx';
 import { AuthProvider } from './context/AuthContext';
 import './index.css';
 
-console.log("%c🚀 REPODATA PROTOCOL [v4.6] ENGAGED [SYNCHRO_STABLE]", "color: #00FFFF; font-weight: bold; font-size: 24px; text-shadow: 2px 2px 0px #000;");
+console.log("%c🚀 CodeNova PROTOCOL [v4.6] ENGAGED [SYNCHRO_STABLE]", "color: #00FFFF; font-weight: bold; font-size: 24px; text-shadow: 2px 2px 0px #000;");
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

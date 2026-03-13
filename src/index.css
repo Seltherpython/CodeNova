@@ -23,6 +23,17 @@
 }
 
 /* ─── Base ──────────────────────────────────────────── */
+::selection {
+  background-color: #76F1BC;
+  color: #000000;
+  text-shadow: none;
+}
+::-moz-selection {
+  background-color: #76F1BC;
+  color: #000000;
+  text-shadow: none;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
