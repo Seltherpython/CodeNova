@@ -91,7 +91,7 @@ export default function About() {
                 <div className="text-[#76F1BC] font-black text-2xl">01</div>
                 <h3 className="text-lg font-black text-white uppercase tracking-widest">Generate an API Key</h3>
                 <p className="text-sm text-zinc-500 leading-relaxed font-bold">
-                  Navigate to your <strong>API Keys</strong> tab in the console and create a new key. Keep this `rp_live_...` key secure, as it maps directly to your account's 1000 daily request quota.
+                  Navigate to your <strong>API Keys</strong> tab in the console and create a new key. Keep this key secure, as it maps directly to your account's 1000 daily request quota.
                 </p>
               </div>
               <div className="space-y-4">
@@ -122,7 +122,7 @@ export default function About() {
 <span className="text-purple-400">import</span> json{"\n"}{"\n"}
 <span className="text-zinc-500"># Define your request parameters</span>{"\n"}
 url = <span className="text-green-300">"https://Repo Trace.ai/api/repo/YOUR_REPO_ID/chat"</span>{"\n"}
-headers = {"{"}{"\n"}  <span className="text-green-300">"Authorization"</span>: <span className="text-green-300">"Bearer rp_live_abc123..."</span>,{"\n"}  <span className="text-green-300">"Content-Type"</span>: <span className="text-green-300">"application/json"</span>{"\n"}{"}"}{"\n"}
+headers = {"{"}{"\n"}  <span className="text-green-300">"Authorization"</span>: <span className="text-green-300">"Bearer YOUR_API_KEY"</span>,{"\n"}  <span className="text-green-300">"Content-Type"</span>: <span className="text-green-300">"application/json"</span>{"\n"}{"}"}{"\n"}
 payload = {"{"} <span className="text-green-300">"query"</span>: <span className="text-green-300">"Find a way to optimize the auth module."</span> {"}"}{"\n"}{"\n"}
 <span className="text-zinc-500"># Send the structural analysis prompt</span>{"\n"}
 response = requests.post(url, headers=headers, data=json.dumps(payload)){"\n"}{"\n"}

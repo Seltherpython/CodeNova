@@ -301,6 +301,16 @@ const SettingsPage = () => {
   const [promoCode, setPromoCode] = useState('');
   const [promoMessage, setPromoMessage] = useState('');
   const [isRedeeming, setIsRedeeming] = useState(false);
+  const [promoExhausted, setPromoExhausted] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then(res => res.json())
+      .then(data => {
+        if (data.promoExhausted) setPromoExhausted(true);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleRedeem = async () => {
     if (!promoCode) return;
@@ -375,34 +385,36 @@ const SettingsPage = () => {
             onClick={logout}
             className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 sm:px-10 py-4 sm:py-5 bg-white/5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl sm:rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] transition-all border border-white/5 active:scale-98"
           >
-            Terminate Session <LogOut className="w-4 h-4" />
+            Logout <LogOut className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="pt-8 border-t border-white/10 relative z-10 space-y-4">
-          <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] text-zinc-600">Redeem Promotion Code</p>
-          <div className="flex gap-2">
-            <input 
-              type="text" 
-              value={promoCode}
-              onChange={(e) => setPromoCode(e.target.value)}
-              placeholder="e.g. PRO-HOSTED-3X"
-              className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#76F1BC] transition-colors"
-            />
-            <button 
-              onClick={handleRedeem}
-              disabled={isRedeeming || !promoCode}
-              className="px-6 py-3 bg-[#76F1BC] text-black rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#5EDBA8] transition-colors disabled:opacity-50"
-            >
-              {isRedeeming ? 'Verifying...' : 'Redeem'}
-            </button>
+        {!isMockAuth && !promoExhausted && (
+          <div className="pt-8 border-t border-white/10 relative z-10 space-y-4">
+            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] text-zinc-600">Redeem Promotion Code</p>
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value)}
+                placeholder="Enter Code"
+                className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#76F1BC] transition-colors"
+              />
+              <button 
+                onClick={handleRedeem}
+                disabled={isRedeeming || !promoCode}
+                className="px-6 py-3 bg-[#76F1BC] text-black rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#5EDBA8] transition-colors disabled:opacity-50"
+              >
+                {isRedeeming ? 'Verifying...' : 'Redeem'}
+              </button>
+            </div>
+            {promoMessage && (
+              <p className={`text-xs font-medium uppercase tracking-widest ${promoMessage.includes('error') || promoMessage.includes('Failed') ? 'text-red-400' : 'text-[#76F1BC]'}`}>
+                {promoMessage}
+              </p>
+            )}
           </div>
-          {promoMessage && (
-            <p className={`text-xs font-medium uppercase tracking-widest ${promoMessage.includes('error') || promoMessage.includes('Failed') ? 'text-red-400' : 'text-[#76F1BC]'}`}>
-              {promoMessage}
-            </p>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

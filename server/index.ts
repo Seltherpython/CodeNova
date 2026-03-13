@@ -249,12 +249,17 @@ async function start() {
     let writeStatus = "ok";
     try { await fs.writeFile(path.join(LOCAL_DATA_DIR, ".health"), Date.now().toString()); }
     catch { writeStatus = "error"; }
+    
+    await syncPromoState();
+    
     res.json({
-      status: "active", version: "4.9.0",
+      status: "active", 
+      version: "4.9.0",
       storage: db ? "Firebase" : "Local",
       ai: USE_OLLAMA ? `Ollama (${OLLAMA_MODEL})` : `Gemini (${GEMINI_MODEL})`,
       rateLimits: IS_DEPLOYED ? "active" : "disabled",
       write: writeStatus,
+      promoExhausted: promoUses <= 0
     });
   });
 
