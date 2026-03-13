@@ -27,9 +27,11 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT && !admin.apps.length) {
 }
 
 // --- Environment & State ---
-const IS_DEPLOYED = true; 
+const IS_DEPLOYED = process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
+const IS_SELF_HOSTED = process.env.DISABLE_RATE_LIMIT === "true" || !IS_DEPLOYED;
+
 let unlockedUsers = new Set<string>();
-let promoUses = 3;
+let promoUses = IS_SELF_HOSTED ? 9999 : 3;
 
 async function syncPromoState() {
   if (db) {
@@ -110,12 +112,16 @@ v1.get("/health", async (_req, res) => {
     status: "active", 
     version: "1.0.0-beta", 
     serverless: true, 
-    promoExhausted: promoUses <= 0,
+    mode: IS_SELF_HOSTED ? "Self-Hosted" : "Cloud",
+    storage: db ? "Firebase" : "Disconnected",
+    promoExhausted: !IS_SELF_HOSTED && promoUses <= 0,
     timestamp: new Date().toISOString()
   });
 });
 
 v1.post("/promo", authenticate, async (req, res) => {
+  if (IS_SELF_HOSTED) return res.json({ success: true, message: "Self-hosted: All features unlocked." });
+  
   const { code } = req.body;
   if (code === "PRO-HOSTED-3X") {
     await syncPromoState();
@@ -173,18 +179,18 @@ v1.get("/repo/:id", authenticate, async (req, res) => {
 
 v1.post("/repo/:id/chat", authenticate, async (req, res) => {
   const user = (req as any).user;
-  if (user?.isApiKey && !unlockedUsers.has(user?.uid)) {
-     return res.status(403).json({ error: "Agent API access restricted." });
+  if (user?.isApiKey && !unlockedUsers.has(user?.uid) && !IS_SELF_HOSTED) {
+     return res.status(403).json({ error: "Agent API access restricted. Unlock with promo code." });
   }
   const { query, history } = req.body;
   try {
-    if (db) {
-      const doc = await db.collection("repositories").doc(req.params.id).get();
-      if (doc.exists) {
-        const data = doc.data() as any;
-        const answer = await chatWithCodebase(query, data.unified_content, history || []);
-        return res.json({ answer });
-      }
+    if (!db) return res.status(503).json({ error: "Structural storage unavailable. Verify FIREBASE_SERVICE_ACCOUNT." });
+    
+    const doc = await db.collection("repositories").doc(req.params.id).get();
+    if (doc.exists) {
+      const data = doc.data() as any;
+      const answer = await chatWithCodebase(query, data.unified_content, history || []);
+      return res.json({ answer });
     }
     res.status(404).json({ error: "Project not found in structural index." });
   } catch (e: any) {
