@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { compressRepoContent } from "./huggingfaceService";
+
 
 // ─── Environment ────────────────────────────────────────────────────────────
 export const USE_OLLAMA = process.env.USE_OLLAMA === "true";
@@ -57,7 +57,7 @@ async function generate(prompt: string, opts?: GenerationOptions): Promise<strin
 
 // ─── Summarize codebase ──────────────────────────────────────────────────────
 export async function summarizeCodebase(unifiedContent: string, opts?: GenerationOptions): Promise<string> {
-  const contentToAnalyze = await compressRepoContent(unifiedContent);
+  const contentToAnalyze = unifiedContent;
 
   const prompt = `Nova, execute a deep architectural analysis of the provided codebase.
 

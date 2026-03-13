@@ -11,3 +11,6 @@ data/
 *.tsbuildinfo
 *.tmp
 Thumbs.db
+
+.vercel
+.env*.local
