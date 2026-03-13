@@ -37,7 +37,7 @@ export default function Home() {
               <div className="flex flex-wrap justify-center gap-3 mb-8">
                 <span className="rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.3em] text-[#76F1BC] bg-[#76F1BC]/5 border border-[#76F1BC]/10 flex items-center gap-2">
                   <span className="flex h-1.5 w-1.5 rounded-full bg-[#76F1BC] animate-pulse" />
-                  System v5.0 Active
+                  System v1 (Beta) Active
                 </span>
                 <span className="rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.3em] text-white/40 bg-white/5 border border-white/10 flex items-center gap-2">
                   <Globe className="w-3 h-3" />

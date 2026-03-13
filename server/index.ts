@@ -217,6 +217,24 @@ async function start() {
     next();
   });
 
+  const sanitizeString = (str: string) => str.replace(/<{1}[^<>]{0,}>{1}/g, "").trim();
+  const sanitize: express.RequestHandler = (req, res, next) => {
+    if (req.body && typeof req.body === "object") {
+      for (const k in req.body) {
+        if (typeof req.body[k] === "string") req.body[k] = sanitizeString(req.body[k]);
+      }
+    }
+    if (req.query && typeof req.query === "object") {
+      for (const k in req.query as any) {
+        if (typeof req.query[k] === "string") (req.query as any)[k] = sanitizeString(req.query[k] as string);
+      }
+    }
+    next();
+  };
+
+  const v1 = express.Router();
+  v1.use(sanitize);
+
   // ─── Rate limiting (enabled globally for all environments) ──────────
   const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -245,7 +263,7 @@ async function start() {
   console.log("🔒 API Rate limits active (1000 requests).");
 
   // ─── Health ───────────────────────────────────────────────────────────────
-  app.get("/api/health", async (_req, res) => {
+  v1.get("/health", async (_req, res) => {
     let writeStatus = "ok";
     try { await fs.writeFile(path.join(LOCAL_DATA_DIR, ".health"), Date.now().toString()); }
     catch { writeStatus = "error"; }
@@ -254,7 +272,7 @@ async function start() {
     
     res.json({
       status: "active", 
-      version: "4.9.0",
+      version: "1.0.0-beta",
       storage: db ? "Firebase" : "Local",
       ai: USE_OLLAMA ? `Ollama (${OLLAMA_MODEL})` : `Gemini (${GEMINI_MODEL})`,
       rateLimits: IS_DEPLOYED ? "active" : "disabled",
@@ -264,7 +282,7 @@ async function start() {
   });
 
   // ─── PROMO CODE REDEMPTION ────────────────────────────────────────────────
-  app.post("/api/promo", authenticate, async (req, res) => {
+  v1.post("/promo", authenticate, async (req, res) => {
     const { code } = req.body;
     if (code === "PRO-HOSTED-3X") {
       await syncPromoState(); // Always sync latest before checking
@@ -285,7 +303,7 @@ async function start() {
   });
 
   // ─── REPOS ────────────────────────────────────────────────────────────────
-  app.get("/api/repos", authenticate, async (req, res) => {
+  v1.get("/repos", authenticate, async (req, res) => {
     try {
       if (db) {
         const snap = await db.collection("repositories").get();
@@ -301,7 +319,7 @@ async function start() {
   });
 
   // ─── INGEST (initial) ─────────────────────────────────────────────────────
-  app.post("/api/ingest", authenticate, async (req, res) => {
+  v1.post("/ingest", authenticate, async (req, res) => {
     const { url } = req.body;
     const parts = parseGitHubUrl(url);
     if (!parts) return res.status(400).json({ error: "Invalid GitHub URL." });
@@ -347,7 +365,7 @@ async function start() {
   });
 
   // ─── REFRESH (re-sync existing repo) ─────────────────────────────────────
-  app.post("/api/repo/:id/refresh", authenticate, async (req, res) => {
+  v1.post("/repo/:id/refresh", authenticate, async (req, res) => {
     const { id } = req.params;
     const { url } = req.body; // pass original URL again
     const parts = parseGitHubUrl(url);
@@ -393,14 +411,14 @@ async function start() {
   });
 
   // ─── GET single repo ──────────────────────────────────────────────────────
-  app.get("/api/repo/:id", authenticate, async (req, res) => {
+  v1.get("/repo/:id", authenticate, async (req, res) => {
     const data = await getRepoTrace(req.params.id);
     if (!data) return res.status(404).json({ error: "Repo not found." });
     res.json(data);
   });
 
   // ─── CHAT ─────────────────────────────────────────────────────────────────
-  app.post("/api/repo/:id/chat", authenticate, async (req, res) => {
+  v1.post("/repo/:id/chat", authenticate, async (req, res) => {
     const user = (req as any).user;
     
     // Cloud limitation: prohibit external API Key agents unless unlocked 
@@ -438,7 +456,7 @@ async function start() {
   });
 
   // ─── CONTEXT FILE — public read (for AI agents, no auth needed) ──────────
-  app.get("/api/repo/:id/context.txt", async (req, res) => {
+  v1.get("/repo/:id/context.txt", async (req, res) => {
     try {
       const filePath = await getContextFilePath(req.params.id);
       const content = await fs.readFile(filePath, "utf-8");
@@ -486,7 +504,7 @@ async function start() {
   });
 
   // ─── CONTEXT FILE — update manually ──────────────────────────────────────
-  app.put("/api/repo/:id/context.txt", authenticate, async (req, res) => {
+  v1.put("/repo/:id/context.txt", authenticate, async (req, res) => {
     const { content } = req.body;
     if (typeof content !== "string") return res.status(400).json({ error: "content string required." });
     try {
@@ -507,7 +525,7 @@ async function start() {
   });
 
   // ─── AI EDIT context file ─────────────────────────────────────────────────
-  app.post("/api/repo/:id/ai-edit", authenticate, async (req, res) => {
+  v1.post("/repo/:id/ai-edit", authenticate, async (req, res) => {
     const { instruction } = req.body;
     if (!instruction) return res.status(400).json({ error: "instruction required." });
 
@@ -559,7 +577,7 @@ async function start() {
   });
 
   // ─── KEYS ─────────────────────────────────────────────────────────────────
-  app.get("/api/keys", authenticate, requireSelfHosted, async (req, res) => {
+  v1.get("/keys", authenticate, requireSelfHosted, async (req, res) => {
     const uid = (req as any).user?.uid;
     try {
       if (db) {
@@ -572,7 +590,7 @@ async function start() {
     } catch (e) { res.status(500).json({ error: "Fetch keys failed" }); }
   });
 
-  app.post("/api/keys", authenticate, requireSelfHosted, async (req, res) => {
+  v1.post("/keys", authenticate, requireSelfHosted, async (req, res) => {
     const { name } = req.body;
     const uid = (req as any).user?.uid || "anonymous";
     const key = `rp_live_${crypto.randomBytes(16).toString("hex")}`;
@@ -588,7 +606,7 @@ async function start() {
     } catch (e) { res.status(500).json({ error: "Key creation failed" }); }
   });
 
-  app.delete("/api/keys/:id", authenticate, requireSelfHosted, async (req, res) => {
+  v1.delete("/keys/:id", authenticate, requireSelfHosted, async (req, res) => {
     try {
       if (db) await db.collection("api_keys").doc(req.params.id).delete();
       else await fs.unlink(path.join(STORE.keys, `${req.params.id}.json`));
@@ -597,7 +615,7 @@ async function start() {
   });
 
   // ─── Plugins ──────────────────────────────────────────────────────────────
-  app.post("/api/plugins/random-identifier", authenticate, async (req, res) => {
+  v1.post("/plugins/random-identifier", authenticate, async (req, res) => {
     const { seed, count } = req.body;
     if (!seed) return res.status(400).json({ error: "seed required." });
     try {
@@ -605,6 +623,9 @@ async function start() {
       res.json({ success: true, timestamp: new Date().toISOString(), identifiers });
     } catch (e) { res.status(500).json({ error: "Plugin failed." }); }
   });
+
+  app.use("/api/v1", v1);
+  app.use("/api", v1); // Compatibility
 
   // ─── Vite / Static serving ─────────────────────────────────────────────────
   if (process.env.NODE_ENV !== "production") {
@@ -629,7 +650,7 @@ async function start() {
 
   const PORT = Number(process.env.PORT) || 3005;
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`\n🚀 Repo Trace PROTOCOL v4.8 READY`);
+    console.log(`\n🚀 Repo Trace PROTOCOL v1 (BETA) READY`);
     console.log(`🛰️  http://localhost:${PORT}`);
     console.log(`🤖 AI Backend: ${USE_OLLAMA ? `Ollama (${OLLAMA_MODEL}) @ ${process.env.OLLAMA_HOST || "http://localhost:11434"}` : `Gemini (${GEMINI_MODEL})`}`);
     console.log(`🔒 Rate Limits: ${IS_DEPLOYED ? "ACTIVE (deployed)" : "DISABLED (self-hosted)"}`);

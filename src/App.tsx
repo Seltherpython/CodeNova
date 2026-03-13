@@ -75,7 +75,7 @@ const DatabasePage = () => {
       try {
         const token = await getToken();
         if (!token) return;
-        const res = await fetch('/api/repos', {
+        const res = await fetch('/api/v1/repos', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -154,7 +154,7 @@ const APIKeysPage = () => {
     try {
       const token = await getToken();
       if (!token) return;
-      const res = await fetch('/api/keys', {
+      const res = await fetch('/api/v1/keys', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -173,7 +173,7 @@ const APIKeysPage = () => {
     if (!newKeyName) return;
     try {
       const token = await getToken();
-      await fetch('/api/keys', {
+      await fetch('/api/v1/keys', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -304,7 +304,7 @@ const SettingsPage = () => {
   const [promoExhausted, setPromoExhausted] = useState(false);
 
   useEffect(() => {
-    fetch('/api/health')
+    fetch('/api/v1/health')
       .then(res => res.json())
       .then(data => {
         if (data.promoExhausted) setPromoExhausted(true);
@@ -318,7 +318,7 @@ const SettingsPage = () => {
     setPromoMessage('');
     try {
       const token = await getToken();
-      const res = await fetch('/api/promo', {
+      const res = await fetch('/api/v1/promo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ code: promoCode.trim() })
@@ -379,7 +379,7 @@ const SettingsPage = () => {
         <div className="pt-8 sm:pt-12 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 sm:gap-8 relative z-10">
           <div className="space-y-1.5 sm:space-y-2">
             <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] text-zinc-600">System Version</p>
-            <p className="text-xs sm:text-sm font-black text-[#76F1BC] tracking-widest italic uppercase">Repo Trace Protocol v5.0.0</p>
+            <p className="text-xs sm:text-sm font-black text-[#76F1BC] tracking-widest italic uppercase">Repo Trace Protocol v1 (Beta)</p>
           </div>
           <button 
             onClick={logout}

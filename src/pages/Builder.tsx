@@ -123,7 +123,7 @@ export default function Builder() {
     setIsIngesting(true);
     try {
       const token = await getToken();
-      const res = await fetch(`/api/repo/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`/api/v1/repo/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error('Repo not found.');
       const result = await res.json();
       setData({ ...result, id, status: 'indexed' });
@@ -136,7 +136,7 @@ export default function Builder() {
   // ─── Load context file ──────────────────────────────────────────────────
   const fetchContextFile = async (id: string) => {
     try {
-      const res = await fetch(`/api/repo/${id}/context.txt`);
+      const res = await fetch(`/api/v1/repo/${id}/context.txt`);
       if (res.ok) setContextFile(await res.text());
     } catch {}
   };
@@ -154,7 +154,7 @@ export default function Builder() {
     setIsIngesting(true); setError(''); setData(null); setContextFile('');
     try {
       const hdrs = await getHeaders();
-      const res = await fetch('/api/ingest', {
+      const res = await fetch('/api/v1/ingest', {
         method: 'POST',
         headers: hdrs,
         body: JSON.stringify({ url: finalUrl }),
@@ -178,7 +178,7 @@ export default function Builder() {
     setIsRefreshing(true); setError('');
     try {
       const hdrs = await getHeaders();
-      const res = await fetch(`/api/repo/${data.id}/refresh`, {
+      const res = await fetch(`/api/v1/repo/${data.id}/refresh`, {
         method: 'POST',
         headers: hdrs,
         body: JSON.stringify({ url }),
@@ -209,7 +209,7 @@ export default function Builder() {
     try {
       const hdrs = await getHeaders();
       const history = messages.slice(-8).map(m => ({ role: m.role, content: m.content }));
-      const res = await fetch(`/api/repo/${data.id}/chat`, {
+      const res = await fetch(`/api/v1/repo/${data.id}/chat`, {
         method: 'POST',
         headers: hdrs,
         body: JSON.stringify({ query, history }),
@@ -231,7 +231,7 @@ export default function Builder() {
     if (!data) return;
     try {
       const token = await getToken();
-      await fetch(`/api/repo/${data.id}/context.txt`, {
+      await fetch(`/api/v1/repo/${data.id}/context.txt`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ content: contextFile }),
@@ -247,7 +247,7 @@ export default function Builder() {
     setIsAiEditing(true);
     try {
       const hdrs = await getHeaders();
-      const res = await fetch(`/api/repo/${data.id}/ai-edit`, {
+      const res = await fetch(`/api/v1/repo/${data.id}/ai-edit`, {
         method: 'POST',
         headers: hdrs,
         body: JSON.stringify({ instruction: aiEditInstruction }),
@@ -263,7 +263,7 @@ export default function Builder() {
   const handleDownload = async () => {
     if (!data) return;
     const token = await getToken();
-    window.open(`/api/repo/${data.id}/download?token=${token}`, '_blank');
+    window.open(`/api/v1/repo/${data.id}/download?token=${token}`, '_blank');
   };
 
   // ─── Copy helper ────────────────────────────────────────────────────────
@@ -279,7 +279,7 @@ export default function Builder() {
     setIsGeneratingIds(true);
     try {
       const token = await getToken();
-      const res = await fetch('/api/plugins/random-identifier', {
+      const res = await fetch('/api/v1/plugins/random-identifier', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ seed: identifierSeed, count: 6 }),
@@ -333,7 +333,7 @@ export default function Builder() {
               <Cpu className={`w-4 h-4 ${isEmpty ? 'text-zinc-300' : 'text-[#76F1BC]'}`} />
             </div>
             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">
-              Structural Engine <span className="hidden sm:inline">v5.0 Industrial</span>
+              Structural Engine <span className="hidden sm:inline">v1 (Beta)</span>
             </p>
             {data && (
               <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-zinc-700">
@@ -544,9 +544,9 @@ export default function Builder() {
                           <Globe className="w-4 h-4 text-[#76F1BC] shrink-0" />
                           <div className="min-w-0 flex-1">
                             <p className="text-[8px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Public Context URL (for AI agents)</p>
-                            <code className="text-[10px] text-zinc-400 font-mono truncate block">{BASE_URL}/api/repo/{data.id}/context.txt</code>
+                            <code className="text-[10px] text-zinc-400 font-mono truncate block">{BASE_URL}/api/v1/repo/{data.id}/context.txt</code>
                           </div>
-                          <button onClick={() => copySnippet(`${BASE_URL}/api/repo/${data.id}/context.txt`, 'ctx-url')}
+                          <button onClick={() => copySnippet(`${BASE_URL}/api/v1/repo/${data.id}/context.txt`, 'ctx-url')}
                             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all shrink-0">
                             {copiedSnippet === 'ctx-url' ? <Check className="w-3.5 h-3.5 text-[#76F1BC]" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
                           </button>
@@ -578,7 +578,7 @@ export default function Builder() {
                             <span className="text-[9px] font-black bg-blue-500/20 text-blue-300 px-2 py-1 rounded uppercase">GET</span>
                             <span className="text-[10px] font-mono text-zinc-400">Public — no auth needed</span>
                           </div>
-                          <CopyBlock code={`GET ${BASE_URL}/api/repo/${data.id}/context.txt\n\n# Returns the full LLM-ready context file as plain text.`} lang="bash" />
+                          <CopyBlock code={`GET ${BASE_URL}/api/v1/repo/${data.id}/context.txt\n\n# Returns the full LLM-ready context file as plain text.`} lang="bash" />
                         </div>
 
                         {/* Endpoint 2: Chat */}
@@ -587,7 +587,7 @@ export default function Builder() {
                             <span className="text-[9px] font-black bg-green-500/20 text-green-300 px-2 py-1 rounded uppercase">POST</span>
                             <span className="text-[10px] font-mono text-zinc-400">Chat with this repo</span>
                           </div>
-                          <CopyBlock code={`curl -X POST ${BASE_URL}/api/repo/${data.id}/chat \\\n  -H "Authorization: Bearer YOUR_RP_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"query": "Can you explain this codebase like I am a beginner?", "history": []}'`} lang="bash" />
+                          <CopyBlock code={`curl -X POST ${BASE_URL}/api/v1/repo/${data.id}/chat \\\n  -H "Authorization: Bearer YOUR_RP_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"query": "Can you explain this codebase like I am a beginner?", "history": []}'`} lang="bash" />
                         </div>
 
                         {/* Endpoint 3: Refresh */}
@@ -596,13 +596,13 @@ export default function Builder() {
                             <span className="text-[9px] font-black bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded uppercase">POST</span>
                             <span className="text-[10px] font-mono text-zinc-400">Re-sync from GitHub</span>
                           </div>
-                          <CopyBlock code={`curl -X POST ${BASE_URL}/api/repo/${data.id}/refresh \\\n  -H "Authorization: Bearer YOUR_RP_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"url": "https://github.com/${data.metadata.owner}/${data.metadata.repo || data.metadata.name}"}'`} lang="bash" />
+                          <CopyBlock code={`curl -X POST ${BASE_URL}/api/v1/repo/${data.id}/refresh \\\n  -H "Authorization: Bearer YOUR_RP_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"url": "https://github.com/${data.metadata.owner}/${data.metadata.repo || data.metadata.name}"}'`} lang="bash" />
                         </div>
 
                         {/* OpenAI-compatible system prompt snippet */}
                         <div className="space-y-2">
                           <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Add as extended context in any AI agent</p>
-                          <CopyBlock code={`# Fetch the live context and use as system prompt\nimport requests\n\ncontext = requests.get("${BASE_URL}/api/repo/${data.id}/context.txt").text\n\nmessages = [\n    {"role": "system", "content": f"You have access to this codebase:\\\\n{context}"},\n    {"role": "user",   "content": "Your question here"}\n]`} lang="python" />
+                          <CopyBlock code={`# Fetch the live context and use as system prompt\nimport requests\n\ncontext = requests.get("${BASE_URL}/api/v1/repo/${data.id}/context.txt").text\n\nmessages = [\n    {"role": "system", "content": f"You have access to this codebase:\\\\n{context}"},\n    {"role": "user",   "content": "Your question here"}\n]`} lang="python" />
                         </div>
                       </motion.div>
                     )}

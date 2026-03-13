@@ -2,7 +2,6 @@ import express from "express";
 import "dotenv/config";
 import cors from "cors";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 import compression from "compression";
 import fs from "fs/promises";
 import path from "path";
@@ -29,7 +28,7 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT && !admin.apps.length) {
 }
 
 // --- Environment & State ---
-const IS_DEPLOYED = true; // api/index.ts is only used on Vercel
+const IS_DEPLOYED = true; 
 let unlockedUsers = new Set<string>();
 let promoUses = 3;
 
@@ -60,12 +59,6 @@ async function bootstrap() {
   await fs.mkdir(STORE.repos,  { recursive: true });
   await fs.mkdir(STORE.keys,   { recursive: true });
   await fs.mkdir(STORE.files,  { recursive: true });
-}
-
-async function atomicWrite(filePath: string, data: any) {
-  const tmp = `${filePath}.tmp`;
-  await fs.writeFile(tmp, typeof data === "string" ? data : JSON.stringify(data), "utf-8");
-  await fs.rename(tmp, filePath);
 }
 
 // --- Middleware ---
@@ -99,28 +92,33 @@ const authenticate: express.RequestHandler = async (req, res, next) => {
   res.status(403).json({ error: "Access denied." });
 };
 
-const requireSelfHosted: express.RequestHandler = async (req, res, next) => {
-  const uid = (req as any).user?.uid;
-  await syncPromoState();
-  if (IS_DEPLOYED && !unlockedUsers.has(uid)) {
-     return res.status(403).json({ error: "Feature restricted to Self-Hosted version or Cloud with unlocked perks." });
-  }
-  next();
-};
-
 const app = express();
 app.use(compression());
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: "*", methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"] }));
 app.use(express.json({ limit: "10mb" }));
 
+const sanitizeString = (str: string) => str.replace(/<{1}[^<>]{0,}>{1}/g, "").trim();
+const sanitize: express.RequestHandler = (req, res, next) => {
+  if (req.body && typeof req.body === "object") {
+    for (const k in req.body) if (typeof req.body[k] === "string") req.body[k] = sanitizeString(req.body[k]);
+  }
+  if (req.query && typeof req.query === "object") {
+    for (const k in req.query as any) if (typeof req.query[k] === "string") (req.query as any)[k] = sanitizeString(req.query[k] as string);
+  }
+  next();
+};
+
+const v1 = express.Router();
+v1.use(sanitize);
+
 // --- Handlers ---
-app.get("/api/health", async (_req, res) => {
+v1.get("/health", async (_req, res) => {
   await syncPromoState();
-  res.json({ status: "active", version: "4.9.0", serverless: true, promoExhausted: promoUses <= 0 });
+  res.json({ status: "active", version: "1.0.0-beta", serverless: true, promoExhausted: promoUses <= 0 });
 });
 
-app.post("/api/promo", authenticate, async (req, res) => {
+v1.post("/promo", authenticate, async (req, res) => {
   const { code } = req.body;
   if (code === "PRO-HOSTED-3X") {
     await syncPromoState();
@@ -130,7 +128,7 @@ app.post("/api/promo", authenticate, async (req, res) => {
         promoUses--;
         unlockedUsers.add(uid);
         await updatePromoState();
-        return res.json({ success: true, message: "Code accepted! Cloud agent features unlocked." });
+        return res.json({ success: true, message: "Code accepted!" });
       } else if (uid && unlockedUsers.has(uid)) {
         return res.json({ success: true, message: "Already unlocked." });
       }
@@ -140,10 +138,7 @@ app.post("/api/promo", authenticate, async (req, res) => {
   return res.status(400).json({ error: "Invalid code." });
 });
 
-// (Other routes following the same pattern as server/index.ts)
-// For brevity, I will only include the critical ones for Vercel parity.
-
-app.get("/api/repos", authenticate, async (req, res) => {
+v1.get("/repos", authenticate, async (req, res) => {
   if (db) {
     const snap = await db.collection("repositories").get();
     return res.json(snap.docs.map(d => ({ id: d.id, ...d.data().metadata })));
@@ -151,7 +146,7 @@ app.get("/api/repos", authenticate, async (req, res) => {
   res.json([]);
 });
 
-app.post("/api/ingest", authenticate, async (req, res) => {
+v1.post("/ingest", authenticate, async (req, res) => {
   const { url } = req.body;
   const parts = parseGitHubUrl(url);
   if (!parts) return res.status(400).json({ error: "Invalid URL." });
@@ -169,7 +164,7 @@ app.post("/api/ingest", authenticate, async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.get("/api/repo/:id", authenticate, async (req, res) => {
+v1.get("/repo/:id", authenticate, async (req, res) => {
   if (db) {
     const doc = await db.collection("repositories").doc(req.params.id).get();
     if (doc.exists) return res.json(doc.data());
@@ -177,7 +172,7 @@ app.get("/api/repo/:id", authenticate, async (req, res) => {
   res.status(404).json({ error: "Not found." });
 });
 
-app.post("/api/repo/:id/chat", authenticate, async (req, res) => {
+v1.post("/repo/:id/chat", authenticate, async (req, res) => {
   const user = (req as any).user;
   if (user?.isApiKey && !unlockedUsers.has(user?.uid)) {
      return res.status(403).json({ error: "Agent API access restricted." });
@@ -193,5 +188,8 @@ app.post("/api/repo/:id/chat", authenticate, async (req, res) => {
   }
   res.status(404).json({ error: "Not found." });
 });
+
+app.use("/api/v1", v1);
+app.use("/api", v1);
 
 export default app;
