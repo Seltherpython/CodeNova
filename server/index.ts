@@ -16,7 +16,7 @@ import { generateRandomIdentifiers } from "./services/pluginService";
 
 // ─── Environment flags ────────────────────────────────────────────────────────
 // When DISABLE_RATE_LIMIT=true (self-hosted/GitHub version), all AI limits are removed
-const IS_DEPLOYED = process.env.DISABLE_RATE_LIMIT !== "true" && process.env.NODE_ENV === "production";
+const IS_DEPLOYED = (process.env.VERCEL === "1" || process.env.NODE_ENV === "production") && process.env.DISABLE_RATE_LIMIT !== "true";
 
 // ─── Firebase (optional) ─────────────────────────────────────────────────────
 let db: admin.firestore.Firestore | null = null;
@@ -54,13 +54,31 @@ const STORE = {
 };
 
 // ─── Promo & Cloud Restrictions ───────────────────────────────────────────────
-const unlockedUsers = new Set<string>();
+let unlockedUsers = new Set<string>();
 let promoUses = 3;
+
+async function syncPromoState() {
+  if (db) {
+    const doc = await db.collection("system").doc("promo_state").get();
+    if (doc.exists) {
+      const data = doc.data() as any;
+      promoUses = data?.uses !== undefined ? data.uses : 3;
+      unlockedUsers = new Set(data?.unlocked || []);
+    }
+  }
+}
+
+async function updatePromoState() {
+  if (db) {
+    await db.collection("system").doc("promo_state").set({ uses: promoUses, unlocked: Array.from(unlockedUsers) });
+  }
+}
 
 async function bootstrap() {
   await fs.mkdir(STORE.repos,  { recursive: true });
   await fs.mkdir(STORE.keys,   { recursive: true });
   await fs.mkdir(STORE.files,  { recursive: true });
+  await syncPromoState();
 }
 
 async function atomicWrite(filePath: string, data: any) {
@@ -126,8 +144,9 @@ const authenticate: express.RequestHandler = async (req, res, next) => {
 };
 
 // Middleware restricting features on deployed version without a promo
-const requireSelfHosted: express.RequestHandler = (req, res, next) => {
+const requireSelfHosted: express.RequestHandler = async (req, res, next) => {
   const uid = (req as any).user?.uid;
+  await syncPromoState();
   if (IS_DEPLOYED && !unlockedUsers.has(uid)) {
      return res.status(403).json({ error: "Feature restricted to Self-Hosted version or Cloud with unlocked perks." });
   }
@@ -140,7 +159,7 @@ async function getContextFilePath(repoId: string) {
   return path.join(STORE.files, `${repoId}.txt`);
 }
 
-async function getCodeNova(id: string): Promise<any | null> {
+async function getRepoTrace(id: string): Promise<any | null> {
   if (db) {
     const doc = await db.collection("repositories").doc(id).get();
     return doc.exists ? doc.data() : null;
@@ -150,7 +169,7 @@ async function getCodeNova(id: string): Promise<any | null> {
   } catch { return null; }
 }
 
-async function saveCodeNova(id: string, payload: any) {
+async function saveRepoTrace(id: string, payload: any) {
   if (db) await db.collection("repositories").doc(id).set(payload);
   else await atomicWrite(path.join(STORE.repos, `${id}.json`), payload);
 }
@@ -158,7 +177,7 @@ async function saveCodeNova(id: string, payload: any) {
 // ─── Build context .txt file from ingestion ───────────────────────────────────
 function buildContextFile(owner: string, repo: string, summary: string, unifiedContent: string): string {
   return [
-    `# CodeNova CONTEXT FILE`,
+    `# Repo Trace CONTEXT FILE`,
     `# Repository: ${owner}/${repo}`,
     `# Generated: ${new Date().toISOString()}`,
     `# This file is the live, LLM-friendly context for this repository.`,
@@ -240,14 +259,20 @@ async function start() {
   });
 
   // ─── PROMO CODE REDEMPTION ────────────────────────────────────────────────
-  app.post("/api/promo", authenticate, (req, res) => {
+  app.post("/api/promo", authenticate, async (req, res) => {
     const { code } = req.body;
     if (code === "PRO-HOSTED-3X") {
+      await syncPromoState(); // Always sync latest before checking
       if (promoUses > 0) {
-        promoUses--;
         const uid = (req as any).user?.uid;
-        if (uid) unlockedUsers.add(uid);
-        return res.json({ success: true, message: `Code accepted! Cloud agent features unlocked for your account. (${promoUses} uses remaining globally)` });
+        if (uid && !unlockedUsers.has(uid)) {
+          promoUses--;
+          unlockedUsers.add(uid);
+          await updatePromoState();
+          return res.json({ success: true, message: `Code accepted! Cloud agent features unlocked for your account. (${promoUses} uses remaining globally)` });
+        } else if (uid && unlockedUsers.has(uid)) {
+          return res.json({ success: true, message: `Your account is already unlocked with premium privileges.` });
+        }
       }
       return res.status(400).json({ error: "This promo code has already been exhausted." });
     }
@@ -303,7 +328,7 @@ async function start() {
         unified_content: ingestion.unifiedContent,
       };
 
-      await saveCodeNova(repoId, payload);
+      await saveRepoTrace(repoId, payload);
 
       // Write the context .txt file
       const contextContent = buildContextFile(parts.owner, parts.repo, summary, ingestion.unifiedContent);
@@ -349,7 +374,7 @@ async function start() {
         unified_content: ingestion.unifiedContent,
       };
 
-      await saveCodeNova(id, payload);
+      await saveRepoTrace(id, payload);
 
       // Always regenerate the context file on refresh
       const contextContent = buildContextFile(parts.owner, parts.repo, summary, ingestion.unifiedContent);
@@ -364,7 +389,7 @@ async function start() {
 
   // ─── GET single repo ──────────────────────────────────────────────────────
   app.get("/api/repo/:id", authenticate, async (req, res) => {
-    const data = await getCodeNova(req.params.id);
+    const data = await getRepoTrace(req.params.id);
     if (!data) return res.status(404).json({ error: "Repo not found." });
     res.json(data);
   });
@@ -385,7 +410,7 @@ async function start() {
     const customGeminiKey = req.headers["x-gemini-key"] as string | undefined;
     const customGeminiModel = req.headers["x-gemini-model"] as string | undefined;
 
-    const data = await getCodeNova(req.params.id);
+    const data = await getRepoTrace(req.params.id);
     if (!data) return res.status(404).json({ error: "Repo not found." });
 
     // Enforce public agent settings
@@ -396,7 +421,7 @@ async function start() {
     try {
       // update last used API stamp
       data.metadata.lastApiUsage = new Date().toISOString();
-      await saveCodeNova(req.params.id, data);
+      await saveRepoTrace(req.params.id, data);
 
       const answer = await chatWithCodebase(query, data.unified_content, history || [], { 
         ollamaModel: ollamaModelOverride, customGeminiKey, customGeminiModel 
@@ -423,7 +448,7 @@ async function start() {
   // ─── CONTEXT FORMATTED JSON (Live Data Structured API) ────────────────────
   app.get("/api/repo/:id/context.json", async (req, res) => {
     try {
-      const data = await getCodeNova(req.params.id);
+      const data = await getRepoTrace(req.params.id);
       if (!data) return res.status(404).json({ error: "Repo not found." });
       
       const structured: Record<string, string> = {};
@@ -438,7 +463,7 @@ async function start() {
       }
       
       data.metadata.lastApiUsage = new Date().toISOString();
-      await saveCodeNova(req.params.id, data);
+      await saveRepoTrace(req.params.id, data);
       
       res.json(structured);
     } catch {
@@ -448,10 +473,10 @@ async function start() {
 
   // ─── SETTINGS: Public Agent Toggle ─────────────────────────────────────────
   app.post("/api/repo/:id/public-agent", authenticate, async (req, res) => {
-    const data = await getCodeNova(req.params.id);
+    const data = await getRepoTrace(req.params.id);
     if (!data) return res.status(404).json({ error: "Repo not found." });
     data.metadata.publicAgent = !!req.body.enabled;
-    await saveCodeNova(req.params.id, data);
+    await saveRepoTrace(req.params.id, data);
     res.json({ success: true, publicAgent: data.metadata.publicAgent });
   });
 
@@ -463,11 +488,11 @@ async function start() {
       await atomicWrite(await getContextFilePath(req.params.id), content);
 
       // Also update perception_map in main data
-      const data = await getCodeNova(req.params.id);
+      const data = await getRepoTrace(req.params.id);
       if (data) {
         data.perception_map = content;
         data.metadata.updatedAt = new Date().toISOString();
-        await saveCodeNova(req.params.id, data);
+        await saveRepoTrace(req.params.id, data);
       }
 
       res.json({ success: true, size: content.length });
@@ -486,7 +511,7 @@ async function start() {
       let current = "";
       try { current = await fs.readFile(filePath, "utf-8"); }
       catch { 
-        const data = await getCodeNova(req.params.id);
+        const data = await getRepoTrace(req.params.id);
         if (data) current = data.unified_content || "";
       }
 
@@ -502,7 +527,7 @@ async function start() {
   // ─── DOWNLOAD context file ────────────────────────────────────────────────
   app.get("/api/repo/:id/download", authenticate, async (req, res) => {
     try {
-      const data = await getCodeNova(req.params.id);
+      const data = await getRepoTrace(req.params.id);
       if (!data) return res.status(404).json({ error: "Repo not found." });
 
       const filePath = await getContextFilePath(req.params.id);
@@ -599,7 +624,7 @@ async function start() {
 
   const PORT = Number(process.env.PORT) || 3005;
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`\n🚀 CodeNova PROTOCOL v4.8 READY`);
+    console.log(`\n🚀 Repo Trace PROTOCOL v4.8 READY`);
     console.log(`🛰️  http://localhost:${PORT}`);
     console.log(`🤖 AI Backend: ${USE_OLLAMA ? `Ollama (${OLLAMA_MODEL}) @ ${process.env.OLLAMA_HOST || "http://localhost:11434"}` : `Gemini (${GEMINI_MODEL})`}`);
     console.log(`🔒 Rate Limits: ${IS_DEPLOYED ? "ACTIVE (deployed)" : "DISABLED (self-hosted)"}`);

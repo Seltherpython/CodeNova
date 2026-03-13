@@ -291,7 +291,7 @@ export default function Builder() {
     finally { setIsGeneratingIds(false); }
   };
 
-  const BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'https://CodeNova.ai';
+  const BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'https://Repo Trace.ai';
 
   const TABS = [
     { id: 'map',     label: 'Summary', icon: Layers   },
@@ -309,8 +309,8 @@ export default function Builder() {
   return (
     <div className="space-y-4 animate-in pb-16 relative px-4 md:px-6 pt-4 md:pt-6">
       <SEO
-        title={data ? `${data.metadata.name} | AI Code Workbench - CodeNova` : 'Analyze Your Project | CodeNova Advanced Code Insights'}
-        description="Decode any GitHub repository with Nova. Get high-fidelity project maps, smart reasoning, and instant code summaries on the CodeNova workbench."
+        title={data ? `${data.metadata.name} | AI Code Workbench - Repo Trace` : 'Analyze Your Project | Repo Trace Advanced Code Insights'}
+        description="Decode any GitHub repository with Nova. Get high-fidelity project maps, smart reasoning, and instant code summaries on the Repo Trace workbench."
       />
 
       <div>

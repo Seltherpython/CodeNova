@@ -29,10 +29,11 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-const app = initializeApp(firebaseConfig);
+export const isMockAuth = missing.length > 0;
+const app = !isMockAuth ? initializeApp(firebaseConfig) : null;
 
-export const analytics = typeof window !== "undefined" ? getAnalytics(app) : null;
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const analytics = (typeof window !== "undefined" && app) ? getAnalytics(app) : null;
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app) : null;
 
 export default app;

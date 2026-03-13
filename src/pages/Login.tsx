@@ -27,7 +27,7 @@ export default function Login() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center space-y-4">
-        <SEO title="Secure Login | CodeNova - Access Your Code Analysis Portal" description="Sign in to CodeNova to manage your GitHub repositories and access advanced code reasoning tools. Securely connect using your Google or GitHub account." />
+        <SEO title="Secure Login | Repo Trace - Access Your Code Analysis Portal" description="Sign in to Repo Trace to manage your GitHub repositories and access advanced code reasoning tools. Securely connect using your Google or GitHub account." />
         <Loader2 className="w-8 h-8 animate-spin text-[#76F1BC]" />
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Signing in...</p>
       </div>
@@ -90,7 +90,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4 py-12 relative isolate">
-      <SEO title="Secure Login | CodeNova - Access Your Code Analysis Portal" description="Sign in to CodeNova to manage your GitHub repositories and access advanced code reasoning tools. Securely connect using your Google or GitHub account." />
+      <SEO title="Secure Login | Repo Trace - Access Your Code Analysis Portal" description="Sign in to Repo Trace to manage your GitHub repositories and access advanced code reasoning tools. Securely connect using your Google or GitHub account." />
       {/* Background glow */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#76F1BC]/5 rounded-full blur-3xl" />
@@ -108,7 +108,7 @@ export default function Login() {
               <div className="w-10 h-10 bg-[#76F1BC] rounded-xl flex items-center justify-center text-black">
                 <Terminal className="w-5 h-5" />
               </div>
-              <span className="font-black text-lg tracking-tighter text-white uppercase italic">CodeNova</span>
+              <span className="font-black text-lg tracking-tighter text-white uppercase italic">Repo Trace</span>
             </Link>
             <div className="space-y-2">
               <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight uppercase italic">Sign In</h1>

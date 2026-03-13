@@ -10,11 +10,11 @@ interface SEOProps {
 
 export default function SEO({ 
   title, 
-  description = 'CodeNova is a professional tool to understand any GitHub project. Get fast, clear, and free code analysis for developers and AI enthusiasts alike.', 
+  description = 'Repo Trace is a professional tool to understand any GitHub project. Get fast, clear, and free code analysis for developers and AI enthusiasts alike.', 
   canonical,
   ogType = 'website'
 }: SEOProps) {
-  const [hostname, setHostname] = useState('CodeNova.ai');
+  const [hostname, setHostname] = useState('Repo Trace.ai');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -22,12 +22,12 @@ export default function SEO({
       if (currentHost !== 'localhost' && currentHost !== '127.0.0.1' && currentHost !== '') {
         setHostname(currentHost);
       } else {
-        setHostname('CodeNova.ai');
+        setHostname('Repo Trace.ai');
       }
     }
   }, []);
 
-  const siteName = 'CodeNova';
+  const siteName = 'Repo Trace';
   
   // SEO Fix: Ensure title is longer and more descriptive than 11 characters
   const displayTitle = title 
@@ -50,7 +50,7 @@ export default function SEO({
 
       {/* Language & Publisher */}
       <html lang="en" />
-      <meta name="author" content="CodeNova" />
+      <meta name="author" content="Repo Trace" />
       <link rel="publisher" href={`https://${hostname}`} />
 
       {/* Open Graph / Facebook */}

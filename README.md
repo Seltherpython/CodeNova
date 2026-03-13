@@ -1,10 +1,10 @@
-# CodeNova (formerly Repodata AI)
+# Repo Trace (formerly Repodata AI)
 
-CodeNova is an advanced, blazing-fast repository analysis tool that converts complex, messy GitHub codebases into an optimized format that AI agents (like Claude Code, Cursor, and ChatGPT) can instantly digest.
+Repo Trace is an advanced, blazing-fast repository analysis tool that converts complex, messy GitHub codebases into an optimized format that AI agents (like Claude Code, Cursor, and ChatGPT) can instantly digest.
 
 ## Overview
 
-CodeNova simplifies GitHub repositories into "Project Maps"—highly compressed, unified text contexts perfect for feeding into Large Language Models (LLMs) without breaking their context windows. It natively ships with an elite AI Assistant ("Nova") focused exclusively on deep architectural software engineering.
+Repo Trace simplifies GitHub repositories into "Project Maps"—highly compressed, unified text contexts perfect for feeding into Large Language Models (LLMs) without breaking their context windows. It natively ships with an elite AI Assistant ("Nova") focused exclusively on deep architectural software engineering.
 
 ---
 
@@ -14,8 +14,8 @@ To run the full stack (Frontend & Local API Backend) natively on your machine:
 
 **1. Clone the repository**
 ```bash
-git clone https://github.com/Seltherpython/CodeNova.git
-cd CodeNova
+git clone https://github.com/Seltherpython/Repo Trace.git
+cd Repo Trace
 ```
 
 **2. Install dependencies**
@@ -44,7 +44,7 @@ The client will normally launch at `http://localhost:5173`.
 
 ## 🌐 Deploying to Vercel (Serverless Cloud)
 
-CodeNova is built specifically with a frontend-heavy Vite/React structure that maps perfectly to serverless deployments like Vercel.
+Repo Trace is built specifically with a frontend-heavy Vite/React structure that maps perfectly to serverless deployments like Vercel.
 
 **1. Vercel Configuration**
 A `vercel.json` routing configuration is already included to smoothly route all `/api/*` traffic to the Express backend (`api/index.ts`). 
@@ -63,7 +63,7 @@ vercel --prod
 
 ## 🔌 Using the Agent API
 
-CodeNova acts as a dedicated context-engine for your external apps and terminal AI. 
+Repo Trace acts as a dedicated context-engine for your external apps and terminal AI. 
 
 ### 1. Generating Keys
 Navigate to your **API Keys** tab in the console and create a new key.
@@ -71,18 +71,18 @@ Navigate to your **API Keys** tab in the console and create a new key.
 ### 2. Fetching Raw Compressed Context (Public)
 Retrieve the massive, AI-optimized `.txt` file representing an ingested codebase without auth requirements.
 ```bash
-GET https://codenova.vercel.app/api/repo/:repo_id/context.txt
+GET https://Repo Trace.vercel.app/api/repo/:repo_id/context.txt
 ```
 
 ### 3. Fetching Structured JSON Data (Live Format)
 ```bash
-GET https://codenova.vercel.app/api/repo/:repo_id/context.json
+GET https://Repo Trace.vercel.app/api/repo/:repo_id/context.json
 ```
 
 ### 4. Querying the Expert Architecture Engine
 Pass custom API configurations to hit your own models utilizing the codebase as context.
 ```bash
-curl -X POST https://codenova.vercel.app/api/repo/:repo_id/chat \
+curl -X POST https://Repo Trace.vercel.app/api/repo/:repo_id/chat \
   -H "Authorization: Bearer rp_live_abc123..." \
   -H "X-Gemini-Key: your_custom_key" \
   -H "Content-Type: application/json" \
