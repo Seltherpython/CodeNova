@@ -189,7 +189,7 @@ v1.post("/repo/:id/chat", authenticate, async (req, res) => {
   res.status(404).json({ error: "Not found." });
 });
 
-app.use("/api/v1", v1);
-app.use("/api", v1);
+app.use("/v1", v1);
+app.use("/", v1);
 
 export default app;
