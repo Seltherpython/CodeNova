@@ -105,7 +105,7 @@ export default function About() {
                 <div className="text-[#76F1BC] font-black text-2xl">03</div>
                 <h3 className="text-lg font-black text-white uppercase tracking-widest">Prompt the AI Engine</h3>
                 <p className="text-sm text-zinc-500 leading-relaxed font-bold">
-                  Send complex architectural queries to the <code>/api/repo/:id/chat</code> endpoint via <code>POST</code>. Be sure to add your API Key in the <code>Authorization: Bearer</code> header.
+                  Send complex architectural queries to the <code>/api/v1/repo/:id/chat</code> endpoint via <code>POST</code>. Be sure to add your API Key in the <code>Authorization: Bearer</code> header.
                 </p>
               </div>
             </div>
@@ -121,7 +121,7 @@ export default function About() {
 <span className="text-purple-400">import</span> requests{"\n"}
 <span className="text-purple-400">import</span> json{"\n"}{"\n"}
 <span className="text-zinc-500"># Define your request parameters</span>{"\n"}
-url = <span className="text-green-300">"https://repotrace.vercel.app/api/repo/YOUR_REPO_ID/chat"</span>{"\n"}
+url = <span className="text-green-300">"https://repotrace.vercel.app/api/v1/repo/YOUR_REPO_ID/chat"</span>{"\n"}
 headers = {"{"}{"\n"}  <span className="text-green-300">"Authorization"</span>: <span className="text-green-300">"Bearer YOUR_API_KEY"</span>,{"\n"}  <span className="text-green-300">"Content-Type"</span>: <span className="text-green-300">"application/json"</span>{"\n"}{"}"}{"\n"}
 payload = {"{"} <span className="text-green-300">"query"</span>: <span className="text-green-300">"Find a way to optimize the auth module."</span> {"}"}{"\n"}{"\n"}
 <span className="text-zinc-500"># Send the structural analysis prompt</span>{"\n"}
