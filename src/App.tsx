@@ -36,6 +36,51 @@ const Builder = lazy(() => import('./pages/Builder'));
 const Login = lazy(() => import('./pages/Login'));
 const About = lazy(() => import('./pages/About'));
 
+// --- Coming Soon: Browse Web ---
+const BrowseWeb = () => (
+  <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-8 text-center px-4 animate-in">
+    <div className="relative">
+      <motion.div 
+        animate={{ 
+          rotate: 360,
+        }}
+        transition={{ 
+          duration: 20, 
+          repeat: Infinity, 
+          ease: "linear" 
+        }}
+        className="w-32 h-32 md:w-40 md:h-40 rounded-full border border-dashed border-[#76F1BC]/30 p-2"
+      />
+      <motion.div 
+        animate={{ 
+          scale: [1, 1.1, 1],
+          opacity: [0.5, 0.8, 0.5],
+        }}
+        transition={{ 
+          duration: 4, 
+          repeat: Infinity, 
+          ease: "easeInOut" 
+        }}
+        className="absolute inset-0 flex items-center justify-center"
+      >
+        <div className="w-20 h-20 bg-[#76F1BC]/5 rounded-full flex items-center justify-center border border-[#76F1BC]/20 shadow-[0_0_50px_rgba(118,241,188,0.15)]">
+          <Globe className="w-10 h-10 text-[#76F1BC]" />
+        </div>
+      </motion.div>
+    </div>
+    
+    <div className="space-y-4 max-w-sm mx-auto">
+      <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter sm:text-4xl">Browse Web</h2>
+      <p className="text-zinc-500 font-bold uppercase tracking-[0.3em] text-[10px] sm:text-xs">Web exploration protocol is currently being calibrated for v1 production environments.</p>
+    </div>
+    
+    <div className="flex items-center gap-3 px-8 py-3 bg-white/[0.03] border border-white/10 rounded-2xl shadow-2xl group transition-all hover:border-[#76F1BC]/40 hover:bg-[#76F1BC]/5">
+      <div className="w-2 h-2 rounded-full bg-[#76F1BC] animate-pulse" />
+      <span className="text-white font-black text-[10px] uppercase tracking-[0.4em]">Feature Coming Soon</span>
+    </div>
+  </div>
+);
+
 // High-Fidelity Loading Splash
 const PageLoading = () => (
   <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-6 animate-in">
@@ -481,6 +526,7 @@ export default function App() {
   const navItems = [
     { label: 'Analyzer', path: '/builder', icon: Logo },
     { label: 'Project Library', path: '/database', icon: DbIcon },
+    { label: 'Browse Web', path: '/browse', icon: Globe },
     { label: 'API Keys', path: '/keys', icon: Key },
     { label: 'Account', path: '/settings', icon: SettingsIcon },
   ];
@@ -685,6 +731,7 @@ export default function App() {
           <Routes>
             <Route path="/builder" element={<ProtectedRoute><Builder /></ProtectedRoute>} />
             <Route path="/database" element={<ProtectedRoute><DatabasePage /></ProtectedRoute>} />
+            <Route path="/browse" element={<ProtectedRoute><BrowseWeb /></ProtectedRoute>} />
             <Route path="/keys" element={<ProtectedRoute><APIKeysPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/builder" replace />} />

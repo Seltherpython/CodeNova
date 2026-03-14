@@ -45,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
     
     const bootProtocol = async () => {
-      console.log("%c💎 [SESSION_MANAGER] Activating Protocol v4.8 [SYNCHRO_UPDATE]", "color: #00FFFF; font-weight: bold; font-size: 14px;");
+      console.log("%c💎 [SESSION_MANAGER] Activating Protocol v1 (Beta) [SYNCHRO_UPDATE]", "color: #00FFFF; font-weight: bold; font-size: 14px;");
 
       if (isMockAuth) {
         const localUid = localStorage.getItem('local_uid') || `local_user_${Math.random().toString(36).substring(7)}`;
