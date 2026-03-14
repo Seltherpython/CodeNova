@@ -38,46 +38,59 @@ const About = lazy(() => import('./pages/About'));
 
 // --- Coming Soon: Browse Web ---
 const BrowseWeb = () => (
-  <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-8 text-center px-4 animate-in">
-    <div className="relative">
+  <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-12 text-center px-4 animate-in">
+    <div className="relative group">
       <motion.div 
-        animate={{ 
-          rotate: 360,
-        }}
-        transition={{ 
-          duration: 20, 
-          repeat: Infinity, 
-          ease: "linear" 
-        }}
-        className="w-32 h-32 md:w-40 md:h-40 rounded-full border border-dashed border-[#76F1BC]/30 p-2"
+        animate={{ rotate: 360 }}
+        transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+        className="w-48 h-48 md:w-56 md:h-56 rounded-full border border-dashed border-[#76F1BC]/20 p-4"
+      />
+      <motion.div 
+        animate={{ rotate: -360 }}
+        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+        className="absolute inset-4 rounded-full border border-double border-[#76F1BC]/10"
       />
       <motion.div 
         animate={{ 
-          scale: [1, 1.1, 1],
-          opacity: [0.5, 0.8, 0.5],
+          scale: [0.95, 1.05, 0.95],
+          opacity: [0.3, 0.6, 0.3],
         }}
-        transition={{ 
-          duration: 4, 
-          repeat: Infinity, 
-          ease: "easeInOut" 
-        }}
+        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
         className="absolute inset-0 flex items-center justify-center"
       >
-        <div className="w-20 h-20 bg-[#76F1BC]/5 rounded-full flex items-center justify-center border border-[#76F1BC]/20 shadow-[0_0_50px_rgba(118,241,188,0.15)]">
-          <Globe className="w-10 h-10 text-[#76F1BC]" />
+        <div className="w-24 h-24 bg-[#76F1BC]/5 rounded-full flex items-center justify-center border border-[#76F1BC]/20 shadow-[0_0_80px_rgba(118,241,188,0.2)] backdrop-blur-3xl">
+          <Globe className="w-12 h-12 text-[#76F1BC] animate-pulse" />
         </div>
       </motion.div>
     </div>
     
-    <div className="space-y-4 max-w-sm mx-auto">
-      <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter sm:text-4xl">Browse Web</h2>
-      <p className="text-zinc-500 font-bold uppercase tracking-[0.3em] text-[10px] sm:text-xs">Web exploration protocol is currently being calibrated for v1 production environments.</p>
+    <div className="space-y-6 max-w-md mx-auto relative">
+      <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1 bg-[#76F1BC]/10 border border-[#76F1BC]/20 rounded-full">
+         <span className="w-1.5 h-1.5 rounded-full bg-[#76F1BC] animate-pulse" />
+         <span className="text-[8px] font-black text-[#76F1BC] uppercase tracking-[0.3em]">Protocol v1.0.2-BETA</span>
+      </div>
+      <h2 className="text-4xl xs:text-5xl font-black text-white uppercase italic tracking-tighter leading-none">Browse <span className="text-[#76F1BC]">Web</span></h2>
+      <p className="text-zinc-500 font-bold uppercase tracking-[0.4em] text-[10px] sm:text-xs leading-relaxed max-w-xs mx-auto">
+        Linearized web traversal & ingestion protocols are currently undergoing secure calibration.
+      </p>
     </div>
     
-    <div className="flex items-center gap-3 px-8 py-3 bg-white/[0.03] border border-white/10 rounded-2xl shadow-2xl group transition-all hover:border-[#76F1BC]/40 hover:bg-[#76F1BC]/5">
-      <div className="w-2 h-2 rounded-full bg-[#76F1BC] animate-pulse" />
-      <span className="text-white font-black text-[10px] uppercase tracking-[0.4em]">Feature Coming Soon</span>
+    <div className="flex flex-col items-center gap-4">
+      <div className="flex items-center gap-3 px-10 py-4 bg-white/[0.02] border border-white/5 rounded-2xl shadow-2xl relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#76F1BC]/5 to-transparent -translate-x-full animate-shimmer" />
+        <span className="relative z-10 text-zinc-400 font-black text-[10px] uppercase tracking-[0.5em]">Phase 2: Live Connectivity</span>
+      </div>
+      <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Alpha testing scheduled for Q2 2026</p>
     </div>
+    
+    <style>{`
+      @keyframes shimmer {
+        100% { transform: translateX(100%); }
+      }
+      .animate-shimmer {
+        animation: shimmer 3s infinite;
+      }
+    `}</style>
   </div>
 );
 
@@ -516,6 +529,7 @@ export default function App() {
   const location = useLocation();
   const isConsole = location.pathname.startsWith('/builder') || 
                     location.pathname.startsWith('/database') || 
+                    location.pathname.startsWith('/browse') || 
                     location.pathname.startsWith('/keys') || 
                     location.pathname.startsWith('/settings');
 
