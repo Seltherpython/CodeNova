@@ -7,9 +7,8 @@ import fs from "fs/promises";
 import path from "path";
 import admin from "firebase-admin";
 import crypto from "crypto";
-
-import { ingestRepo, parseGitHubUrl } from "../server/services/githubService";
-import { summarizeCodebase, chatWithCodebase, aiEditFile, USE_OLLAMA, OLLAMA_MODEL, GEMINI_MODEL } from "../server/services/geminiService";
+import { ingestRepo, parseGitHubUrl } from "../server/services/githubService.js";
+import { summarizeCodebase, chatWithCodebase, aiEditFile, USE_OLLAMA, OLLAMA_MODEL, GEMINI_MODEL } from "../server/services/geminiService.js";
 
 // --- Firebase Initialization ---
 let db: admin.firestore.Firestore | null = null;

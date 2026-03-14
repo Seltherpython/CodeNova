@@ -124,8 +124,10 @@ export default function Builder() {
     try {
       const token = await getToken();
       const res = await fetch(`/api/v1/repo/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) throw new Error('Repo not found.');
-      const result = await res.json();
+      if (!res.ok) throw new Error(`Repo not found (${res.status}).`);
+      const textResponse = await res.text();
+      let result;
+      try { result = JSON.parse(textResponse || '{}'); } catch { throw new Error(`Server Error: ${res.status}`); }
       setData({ ...result, id, status: 'indexed' });
       loadChatHistory(id);
       fetchContextFile(id);
@@ -159,7 +161,9 @@ export default function Builder() {
         headers: hdrs,
         body: JSON.stringify({ url: finalUrl }),
       });
-      const result = await res.json();
+      const textResponse = await res.text();
+      let result;
+      try { result = JSON.parse(textResponse || '{}'); } catch { throw new Error(`Server Error (${res.status}): ${textResponse.substring(0, 50)}`); }
       if (!res.ok) throw new Error(result.error || 'Ingestion failed.');
       
       // Clear old chat history for fresh url ingestions requested by the user
@@ -183,7 +187,9 @@ export default function Builder() {
         headers: hdrs,
         body: JSON.stringify({ url }),
       });
-      const result = await res.json();
+      const textResponse = await res.text();
+      let result;
+      try { result = JSON.parse(textResponse || '{}'); } catch { throw new Error(`Server Error (${res.status}): ${textResponse.substring(0, 50)}`); }
       if (!res.ok) throw new Error(result.error || 'Refresh failed.');
       setData(result);
       await fetchContextFile(result.id);
@@ -214,7 +220,14 @@ export default function Builder() {
         headers: hdrs,
         body: JSON.stringify({ query, history }),
       });
-      const result = await res.json();
+      let result;
+      const textResponse = await res.text();
+      try {
+        result = JSON.parse(textResponse);
+      } catch (e) {
+        throw new Error(`Server returned an invalid response (${res.status}): ${textResponse || 'Empty response'}`);
+      }
+      
       if (!res.ok) throw new Error(result.error || 'Chat failed.');
       const asstMsg: ChatMessage = { role: 'assistant', content: result.answer, timestamp: Date.now() };
       const final = [...newMsgs, asstMsg];

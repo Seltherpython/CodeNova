@@ -78,7 +78,7 @@ const DatabasePage = () => {
         const res = await fetch('/api/v1/repos', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        const data = await res.json();
+        const data = await res.text().then(t => { try { return JSON.parse(t); } catch { return []; } });
         setRepos(Array.isArray(data) ? data : []);
       } catch (e) {
         console.error("Failed to fetch library", e);
@@ -157,7 +157,7 @@ const APIKeysPage = () => {
       const res = await fetch('/api/v1/keys', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const data = await res.json();
+      const data = await res.text().then(t => { try { return JSON.parse(t); } catch { return []; } });
       setKeys(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error("Failed to fetch keys", e);
@@ -305,7 +305,7 @@ const SettingsPage = () => {
 
   useEffect(() => {
     fetch('/api/v1/health')
-      .then(res => res.json())
+      .then(res => res.text().then(t => { try { return JSON.parse(t); } catch { return {}; } }))
       .then(data => {
         if (data.promoExhausted) setPromoExhausted(true);
       })
@@ -323,7 +323,9 @@ const SettingsPage = () => {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ code: promoCode.trim() })
       });
-      const data = await res.json();
+      const textResponse = await res.text();
+      let data;
+      try { data = JSON.parse(textResponse || '{}'); } catch { data = { error: 'Parse Error' }; }
       if (res.ok) {
         setPromoMessage(data.message);
         setPromoCode('');
@@ -457,7 +459,7 @@ const Footer = () => (
          <span className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 border border-white/5 rounded-full bg-white/[0.01]">
            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#76F1BC] animate-pulse" /> System Live 
          </span>
-         <span className="text-[#76F1BC]/50">v4.8.0</span>
+         <span className="text-[#76F1BC]/50">v1 (Beta)</span>
        </div>
     </div>
   </footer>
